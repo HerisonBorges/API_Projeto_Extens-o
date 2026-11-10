@@ -39,6 +39,13 @@ DB_USER, DB_PASSWORD (obrigatória), PGSSLMODE e SECRET_KEY.
 Para o Supabase, use os dados de Project Settings > Database > Connect
 (Session pooler). O usuário tem o formato postgres.<ref-do-projeto>.
 
+Pool de conexões: database/conexao.py mantém até DB_POOL_MAX conexões abertas
+(padrão 10) e as reaproveita. conectar_banco().close() devolve a conexão ao
+pool; em código novo prefira "with get_db_connection() as conexao:". Conexões
+não devolvidas numa requisição (ex.: exceção) são recuperadas pelo teardown
+registrado no app.py. Se todas estiverem ocupadas, a requisição espera até
+DB_POOL_TIMEOUT segundos.
+
 Criar tabelas e aplicar migrações (não precisa de psql):
 
 python3 -m database.aplicar_migracoes
@@ -211,7 +218,7 @@ Agende no cron, por exemplo a cada 15 minutos:
 
 ## Testes
 
-python3 -m unittest tests.aceite_qa tests.test_reciclagem_horarios -v
+python3 -m unittest tests.aceite_qa tests.test_reciclagem_horarios tests.test_pool -v
 
 Os testes rodam contra o banco do .env, criam empresas de teste e removem os
 dados ao final.

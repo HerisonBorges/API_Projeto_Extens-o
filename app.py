@@ -9,6 +9,8 @@ from flask import Flask  # noqa: E402
 from flasgger import Swagger
 from flask_cors import CORS
 
+from database.conexao import devolver_conexoes_da_requisicao
+
 from routes.auth import auth_bp
 from routes.clientes import clientes_bp
 from routes.configuracoes import configuracoes_bp
@@ -18,6 +20,9 @@ from routes.tarefas import tarefas_bp
 from routes.relatorios import relatorios_bp
 
 app = Flask(__name__)
+
+# Devolve ao pool conexões que uma rota não fechou (ex.: exceção no meio)
+app.teardown_appcontext(devolver_conexoes_da_requisicao)
 
 # Libera o acesso apenas para o front-end local (CRA na 3000, Vite na 5173)
 CORS(app, resources={
