@@ -1,6 +1,7 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify
 
 from database.conexao import conectar_banco
+from seguranca import perfil_requerido, token_obrigatorio
 
 
 relatorios_bp = Blueprint(
@@ -11,13 +12,10 @@ relatorios_bp = Blueprint(
 
 
 @relatorios_bp.route("/vendas", methods=["GET"])
+@token_obrigatorio
+@perfil_requerido("Gestor")
 def relatorio_vendas():
-    empresa_id = request.args.get("empresa_id", type=int)
-
-    if not empresa_id:
-        return jsonify({
-            "erro": "empresa_id é obrigatório."
-        }), 400
+    empresa_id = g.empresa_id
 
     conexao = conectar_banco()
     cursor = conexao.cursor()

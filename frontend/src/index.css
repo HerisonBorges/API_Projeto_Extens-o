@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+/* Kindra Smoked Glass */
+@theme {
+  --color-kindra-fundo: #05161a;
+  --color-kindra-painel: #072e33;
+  --color-kindra-borda: #0c7075;
+  --color-kindra-suporte: #294d61;
+  --color-kindra-acento: #0f969c;
+  --color-kindra-label: #6da5c0;
+}
+
+html {
+  color-scheme: dark;
+}
+
+/* Ícone nativo do relógio/calendário legível no tema escuro */
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+}
