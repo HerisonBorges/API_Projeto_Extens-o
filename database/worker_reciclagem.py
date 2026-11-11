@@ -46,11 +46,11 @@ SQL_PROCESSAR = """
         SET status_reciclagem = 'processado'
         FROM vencidas v
         WHERE o.id = v.id
-        RETURNING o.id, o.empresa_id, o.cliente_id, o.titulo, o.valor
+        RETURNING o.id, o.empresa_id, o.cliente_id, o.titulo, o.valor, o.responsavel_id
     )
     INSERT INTO oportunidades (
         empresa_id, cliente_id, titulo, valor, etapa,
-        etapa_atualizada_em, oportunidade_origem_id
+        etapa_atualizada_em, oportunidade_origem_id, responsavel_id
     )
     SELECT empresa_id,
            cliente_id,
@@ -58,7 +58,8 @@ SQL_PROCESSAR = """
            valor,
            %(etapa_inicial)s,
            NOW(),
-           id
+           id,
+           responsavel_id
     FROM marcadas
     RETURNING id, oportunidade_origem_id, empresa_id;
 """

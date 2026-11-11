@@ -20,6 +20,7 @@ ARQUIVOS = [
     "schema_base.sql",
     "migracao_oportunidades_tarefas.sql",
     "migracao_reciclagem_horarios.sql",
+    "migracao_interacoes_responsavel.sql",
 ]
 
 

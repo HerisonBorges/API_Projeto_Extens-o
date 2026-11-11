@@ -226,7 +226,11 @@ dados ao final.
 
 ## Front-end (frontend/)
 
-React + Tailwind (Vite), tema Kindra Smoked Glass.
+React + Tailwind (Vite), identidade visual SANDRO CRM ("O poder da conexão").
+
+Telas (rotas por hash, o F5 mantém a tela): #/dashboard, #/clientes,
+#/clientes/<id>, #/funil, #/followups, #/relatorios (Gestor) e
+#/configuracoes (Gestor).
 
 cd frontend
 

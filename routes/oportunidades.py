@@ -27,9 +27,16 @@ ETAPA_FINAL = ETAPAS_VALIDAS[-1]
 DIAS_RECICLAGEM_MAX = 365
 
 COLUNAS = (
-    "id, empresa_id, cliente_id, titulo, valor, etapa, "
-    "data_reciclagem_agendada, status_reciclagem, oportunidade_origem_id"
+    "o.id, o.empresa_id, o.cliente_id, o.titulo, o.valor, o.etapa, "
+    "o.data_reciclagem_agendada, o.status_reciclagem, o.oportunidade_origem_id, "
+    "o.responsavel_id, u.nome, o.criado_em, o.etapa_atualizada_em"
 )
+
+# Responsável é opcional (usuário pode ter sido removido): LEFT JOIN
+FROM_OPORTUNIDADES = """
+    FROM oportunidades o
+    LEFT JOIN usuarios u ON u.id = o.responsavel_id
+"""
 
 # Ao sair da etapa final, um agendamento pendente perde o sentido
 SQL_CANCELA_RECICLAGEM = """
@@ -51,7 +58,11 @@ def montar_oportunidade(o):
         "etapa": o[5],
         "data_reciclagem_agendada": o[6].isoformat() if o[6] else None,
         "status_reciclagem": o[7],
-        "oportunidade_origem_id": o[8]
+        "oportunidade_origem_id": o[8],
+        "responsavel_id": o[9],
+        "responsavel_nome": o[10],
+        "criado_em": o[11].isoformat() if o[11] else None,
+        "etapa_atualizada_em": o[12].isoformat() if o[12] else None
     }
 
 
@@ -77,16 +88,16 @@ def listar_oportunidades():
     if etapa:
         cursor.execute(f"""
             SELECT {COLUNAS}
-            FROM oportunidades
-            WHERE empresa_id = %s AND etapa = %s
-            ORDER BY id;
+            {FROM_OPORTUNIDADES}
+            WHERE o.empresa_id = %s AND o.etapa = %s
+            ORDER BY o.id;
         """, (g.empresa_id, etapa))
     else:
         cursor.execute(f"""
             SELECT {COLUNAS}
-            FROM oportunidades
-            WHERE empresa_id = %s
-            ORDER BY id;
+            {FROM_OPORTUNIDADES}
+            WHERE o.empresa_id = %s
+            ORDER BY o.id;
         """, (g.empresa_id,))
 
     resultados = cursor.fetchall()
@@ -105,8 +116,8 @@ def buscar_oportunidade(id):
 
     cursor.execute(f"""
         SELECT {COLUNAS}
-        FROM oportunidades
-        WHERE id = %s AND empresa_id = %s;
+        {FROM_OPORTUNIDADES}
+        WHERE o.id = %s AND o.empresa_id = %s;
     """, (id, g.empresa_id))
 
     oportunidade = cursor.fetchone()
@@ -153,10 +164,11 @@ def criar_oportunidade():
         }), 404
 
     cursor.execute("""
-        INSERT INTO oportunidades (empresa_id, cliente_id, titulo, valor, etapa)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO oportunidades (empresa_id, cliente_id, titulo, valor, etapa,
+                                   responsavel_id)
+        VALUES (%s, %s, %s, %s, %s, %s)
         RETURNING id;
-    """, (g.empresa_id, cliente_id, titulo, valor, etapa))
+    """, (g.empresa_id, cliente_id, titulo, valor, etapa, g.usuario_id))
 
     oportunidade_id = cursor.fetchone()[0]
 

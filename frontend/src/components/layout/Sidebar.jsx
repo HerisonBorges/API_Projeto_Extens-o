@@ -1,51 +1,67 @@
-const ITENS = [
-  { id: "dashboard", rotulo: "Dashboard", icone: "◧", perfis: ["Gestor", "Atendimento"] },
-  { id: "configuracoes", rotulo: "Configurações", icone: "⚙", perfis: ["Gestor"] },
-];
+import { ROTAS, podeAcessar } from "../../rotas.js";
+import Logo from "../marca/Logo.jsx";
 
-export default function Sidebar({ usuario, ativa, onNavegar, onSair }) {
-  const itens = ITENS.filter((item) => item.perfis.includes(usuario.perfil));
+const ICONES = {
+  dashboard: "◧",
+  clientes: "◉",
+  funil: "▥",
+  followups: "◷",
+  relatorios: "▤",
+  configuracoes: "⚙",
+};
+
+export default function Sidebar({ usuario, ativa, onSair }) {
+  const itens = Object.keys(ROTAS).filter((pagina) => podeAcessar(pagina, usuario.perfil));
 
   return (
     <aside
-      className="flex w-full shrink-0 flex-col border-b border-kindra-borda/30 bg-kindra-painel/40
-                 backdrop-blur-xl md:min-h-screen md:w-64 md:border-r md:border-b-0"
+      className="flex w-full shrink-0 flex-col border-b border-sandro-borda/25 bg-sandro-painel/40
+                 md:sticky md:top-0 md:h-screen md:w-64 md:border-r md:border-b-0"
     >
-      <div className="px-6 py-6">
-        <p className="text-lg font-semibold tracking-wide text-white">SANDRO CRM</p>
-        <p className="text-xs text-kindra-label">Kindra · Smoked Glass</p>
+      <div className="px-5 py-6">
+        <Logo comSlogan />
       </div>
 
-      <nav aria-label="Navegação principal" className="flex gap-1 px-3 md:flex-col">
-        {itens.map((item) => {
-          const atual = item.id === ativa;
+      <nav aria-label="Navegação principal" className="flex gap-1 overflow-x-auto px-3 pb-3 md:flex-col md:pb-0">
+        {itens.map((pagina) => {
+          const atual = pagina === ativa;
           return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => onNavegar(item.id)}
+            <a
+              key={pagina}
+              href={`#/${pagina}`}
               aria-current={atual ? "page" : undefined}
-              className={`flex items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm transition
-                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kindra-acento
+              className={`flex shrink-0 items-center gap-3 rounded-lg px-4 py-2.5 text-sm transition
+                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sandro-acento
                           ${atual
-                            ? "bg-kindra-acento font-bold text-kindra-fundo shadow-lg shadow-kindra-acento/20"
-                            : "text-slate-200 hover:bg-kindra-suporte/40"}`}
+                            ? "bg-sandro-acento font-bold text-sandro-fundo shadow-md shadow-sandro-acento/15"
+                            : "text-slate-200 hover:bg-sandro-suporte/40"}`}
             >
-              <span aria-hidden="true">{item.icone}</span>
-              {item.rotulo}
-            </button>
+              <span aria-hidden="true" className="w-4 text-center">{ICONES[pagina]}</span>
+              {ROTAS[pagina].titulo}
+            </a>
           );
         })}
       </nav>
 
-      <div className="mt-auto hidden border-t border-kindra-borda/30 px-6 py-5 md:block">
-        <p className="truncate text-sm text-white">{usuario.nome}</p>
-        <p className="text-xs text-kindra-label">{usuario.perfil}</p>
+      <div className="mt-auto hidden border-t border-sandro-borda/25 px-5 py-5 md:block">
+        <div className="flex items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sandro-azul/60
+                       text-sm font-bold text-white"
+          >
+            {usuario.nome.trim().charAt(0).toUpperCase()}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm text-white">{usuario.nome}</p>
+            <p className="text-xs text-sandro-label">{usuario.perfil}</p>
+          </div>
+        </div>
         <button
           type="button"
           onClick={onSair}
-          className="mt-3 text-xs text-kindra-label underline-offset-4 hover:text-white hover:underline
-                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kindra-acento"
+          className="mt-4 text-xs text-sandro-label underline-offset-4 hover:text-white hover:underline
+                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sandro-acento"
         >
           Sair
         </button>

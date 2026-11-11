@@ -82,7 +82,8 @@ def login():
     cursor.execute(f"""
         SELECT id, empresa_id, nome, email, senha, perfil,
                hora_inicio_acesso, hora_fim_acesso,
-               {SQL_DENTRO_JANELA}
+               {SQL_DENTRO_JANELA},
+               (SELECT e.nome FROM empresas e WHERE e.id = usuarios.empresa_id)
         FROM usuarios
         WHERE email = %(email)s;
     """, {"email": email, "tz": TZ_EMPRESA})
@@ -119,6 +120,7 @@ def login():
         "usuario": {
             "id": usuario[0],
             "empresa_id": usuario[1],
+            "empresa_nome": usuario[9],
             "nome": usuario[2],
             "email": usuario[3],
             "perfil": usuario[5],

@@ -18,6 +18,7 @@ from routes.dashboard import dashboard_bp
 from routes.oportunidades import oportunidades_bp
 from routes.tarefas import tarefas_bp
 from routes.relatorios import relatorios_bp
+from routes.interacoes import interacoes_bp
 
 app = Flask(__name__)
 
@@ -38,6 +39,7 @@ app.register_blueprint(dashboard_bp)
 app.register_blueprint(oportunidades_bp)
 app.register_blueprint(tarefas_bp)
 app.register_blueprint(relatorios_bp)
+app.register_blueprint(interacoes_bp)
 
 if __name__ == "__main__":
     app.run(debug=True)

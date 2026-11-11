@@ -25,9 +25,11 @@ export function lerSessao() {
 }
 
 export function encerrarSessao(motivo = null) {
+  const tinhaSessao = sessionStorage.getItem(CHAVE_TOKEN) !== null;
   sessionStorage.removeItem(CHAVE_TOKEN);
   sessionStorage.removeItem(CHAVE_USUARIO);
-  aoEncerrarSessao(motivo);
+  // Várias requisições podem falhar juntas: avisa o App uma única vez
+  if (tinhaSessao || motivo) aoEncerrarSessao(motivo);
 }
 
 /**
@@ -38,14 +40,19 @@ export function encerrarSessao(motivo = null) {
 async function requisicao(caminho, { method = "GET", body } = {}) {
   const token = sessionStorage.getItem(CHAVE_TOKEN);
 
-  const resposta = await fetch(`${API_URL}${caminho}`, {
-    method,
-    headers: {
-      ...(body !== undefined && { "Content-Type": "application/json" }),
-      ...(token && { Authorization: `Bearer ${token}` }),
-    },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let resposta;
+  try {
+    resposta = await fetch(`${API_URL}${caminho}`, {
+      method,
+      headers: {
+        ...(body !== undefined && { "Content-Type": "application/json" }),
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new ApiError(0, "Não foi possível falar com o servidor. Verifique sua conexão.");
+  }
 
   const corpo = await resposta.json().catch(() => ({}));
 
@@ -66,6 +73,14 @@ async function requisicao(caminho, { method = "GET", body } = {}) {
   return corpo;
 }
 
+const comQuery = (caminho, params) => {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
+  ).toString();
+  return query ? `${caminho}?${query}` : caminho;
+};
+
+// ---- Autenticação ---------------------------------------------------------
 export async function entrar(email, senha) {
   const corpo = await requisicao("/auth/login", { method: "POST", body: { email, senha } });
   sessionStorage.setItem(CHAVE_TOKEN, corpo.token);
@@ -73,18 +88,46 @@ export async function entrar(email, senha) {
   return corpo.usuario;
 }
 
-export const buscarDashboard = (empresaId) => requisicao(`/dashboard/${empresaId}`);
-export const listarOportunidades = () => requisicao("/oportunidades");
+// ---- Clientes -------------------------------------------------------------
 export const listarClientes = () => requisicao("/clientes");
+export const buscarCliente = (id) => requisicao(`/clientes/${id}`);
+export const criarCliente = (dados) => requisicao("/clientes", { method: "POST", body: dados });
+export const excluirCliente = (id) => requisicao(`/clientes/${id}`, { method: "DELETE" });
+
+// ---- Oportunidades / Funil ------------------------------------------------
+export const listarOportunidades = () => requisicao("/oportunidades");
+export const criarOportunidade = (dados) =>
+  requisicao("/oportunidades", { method: "POST", body: dados });
+export const moverOportunidade = (id, etapa) =>
+  requisicao(`/oportunidades/${id}/etapa`, { method: "PATCH", body: { etapa } });
 
 export const agendarReciclagem = (id, agendamento) =>
   requisicao(`/oportunidades/${id}/agendar-reciclagem`, { method: "POST", body: agendamento });
-
 export const cancelarReciclagem = (id) =>
   requisicao(`/oportunidades/${id}/agendar-reciclagem`, { method: "DELETE" });
 
-export const listarUsuariosAcesso = () => requisicao("/configuracoes/usuarios");
+// ---- Interações -----------------------------------------------------------
+export const listarInteracoes = ({ clienteId, limite } = {}) =>
+  requisicao(comQuery("/interacoes", { cliente_id: clienteId, limite }));
+export const criarInteracao = (dados) =>
+  requisicao("/interacoes", { method: "POST", body: dados });
 
+// ---- Tarefas / Follow-ups -------------------------------------------------
+export const listarTarefas = ({ concluida } = {}) =>
+  requisicao(comQuery("/tarefas", { concluida }));
+export const concluirTarefa = (id) => requisicao(`/tarefas/${id}/concluir`, { method: "PATCH" });
+export const atualizarTarefa = (id, dados) =>
+  requisicao(`/tarefas/${id}`, { method: "PUT", body: dados });
+export const buscarAlertas = () => requisicao("/tarefas/alertas");
+
+// ---- Relatórios e painel --------------------------------------------------
+export const buscarRelatorio = (periodo) => requisicao(comQuery("/relatorios/vendas", { periodo }));
+
+// ---- Configurações --------------------------------------------------------
+export const buscarConfiguracoes = () => requisicao("/configuracoes");
+export const atualizarConfiguracoes = (dados) =>
+  requisicao("/configuracoes", { method: "PUT", body: dados });
+export const listarUsuariosAcesso = () => requisicao("/configuracoes/usuarios");
 export const atualizarHorarioUsuario = (id, inicio, fim) =>
   requisicao(`/configuracoes/usuarios/${id}`, {
     method: "PUT",

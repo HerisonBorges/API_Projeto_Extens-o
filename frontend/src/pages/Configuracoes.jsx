@@ -1,13 +1,12 @@
 import AcessoUsuarios from "../components/configuracoes/AcessoUsuarios.jsx";
+import AutomacaoFunil from "../components/configuracoes/AutomacaoFunil.jsx";
 
-export default function Configuracoes() {
+// Duas seções restritas ao Gestor (a rota e a API bloqueiam os demais perfis)
+export default function Configuracoes({ versao }) {
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold text-white">Configurações</h1>
-        <p className="text-sm text-kindra-label">Controle de acesso da equipe</p>
-      </header>
-      <AcessoUsuarios />
+    <div className="grid gap-6 2xl:grid-cols-2">
+      <AcessoUsuarios key={`acesso-${versao}`} />
+      <AutomacaoFunil key={`automacao-${versao}`} />
     </div>
   );
 }
