@@ -22,6 +22,9 @@ function LinhaUsuario({ usuario, onAtualizado }) {
       onAtualizado(resposta.usuario);
       setRetorno({ ok: true, texto: "Salvo." });
     } catch (e) {
+      // Campos voltam ao que está gravado: a linha nunca mostra um horário que não vale
+      setInicio(usuario.hora_inicio_acesso ?? "");
+      setFim(usuario.hora_fim_acesso ?? "");
       setRetorno({ ok: false, texto: e.message });
     } finally {
       setSalvando(false);
@@ -77,7 +80,7 @@ function LinhaUsuario({ usuario, onAtualizado }) {
             disabled={salvando || !inicio || !fim}
             aria-busy={salvando}
             onClick={() => salvar(inicio, fim)}
-            className="rounded-lg bg-kindra-acento px-3 py-1.5 text-xs font-medium text-white shadow-lg
+            className="rounded-lg bg-kindra-acento px-3 py-1.5 text-xs font-bold text-kindra-fundo shadow-lg
                        shadow-kindra-acento/20 hover:brightness-110 focus-visible:outline-none
                        focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed
                        disabled:opacity-50"

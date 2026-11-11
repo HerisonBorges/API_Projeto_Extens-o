@@ -52,11 +52,45 @@ export default function ReciclagemModal({ oportunidade, onFechar, onAgendado }) 
   const fecharRef = useRef(onFechar);
   fecharRef.current = enviando ? () => {} : onFechar;
 
+  const dialogo = useRef(null);
+
   useEffect(() => {
-    const aoTeclar = (e) => e.key === "Escape" && fecharRef.current();
+    const aoTeclar = (e) => {
+      if (e.key === "Escape") {
+        fecharRef.current();
+        return;
+      }
+
+      // Prende o Tab dentro do diálogo: do último volta ao primeiro e vice-versa
+      if (e.key !== "Tab" || !dialogo.current) return;
+
+      const focaveis = [...dialogo.current.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled])'
+      )].filter((el) => !(el.type === "radio" && !el.checked));
+
+      if (focaveis.length === 0) return;
+
+      const primeiro = focaveis[0];
+      const ultimo = focaveis[focaveis.length - 1];
+      const foraDoDialogo = !dialogo.current.contains(document.activeElement);
+
+      if (e.shiftKey && (document.activeElement === primeiro || foraDoDialogo)) {
+        e.preventDefault();
+        ultimo.focus();
+      } else if (!e.shiftKey && (document.activeElement === ultimo || foraDoDialogo)) {
+        e.preventDefault();
+        primeiro.focus();
+      }
+    };
+
     document.addEventListener("keydown", aoTeclar);
     return () => document.removeEventListener("keydown", aoTeclar);
   }, []);
+
+  // Clique no fundo escuro fecha; cliques dentro do painel não
+  const aoClicarNoFundo = (e) => {
+    if (e.target === e.currentTarget) fecharRef.current();
+  };
 
   async function confirmar(evento) {
     evento.preventDefault();
@@ -75,8 +109,12 @@ export default function ReciclagemModal({ oportunidade, onFechar, onAgendado }) 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+    <div
+      onMouseDown={aoClicarNoFundo}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+    >
       <div
+        ref={dialogo}
         role="dialog"
         aria-modal="true"
         aria-labelledby={tituloId}
@@ -171,7 +209,7 @@ export default function ReciclagemModal({ oportunidade, onFechar, onAgendado }) 
               type="submit"
               disabled={enviando}
               aria-busy={enviando}
-              className="rounded-lg bg-kindra-acento px-4 py-2 text-sm font-medium text-white shadow-lg
+              className="rounded-lg bg-kindra-acento px-4 py-2 text-sm font-bold text-kindra-fundo shadow-lg
                          shadow-kindra-acento/20 transition hover:brightness-110
                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70
                          disabled:cursor-wait disabled:opacity-60"

@@ -69,7 +69,7 @@ export default function Login({ aviso, onEntrar }) {
             type="submit"
             disabled={enviando}
             aria-busy={enviando}
-            className="w-full rounded-lg bg-kindra-acento py-2.5 text-sm font-medium text-white shadow-lg
+            className="w-full rounded-lg bg-kindra-acento py-2.5 text-sm font-bold text-kindra-fundo shadow-lg
                        shadow-kindra-acento/20 transition hover:brightness-110 focus-visible:outline-none
                        focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-wait disabled:opacity-60"
           >

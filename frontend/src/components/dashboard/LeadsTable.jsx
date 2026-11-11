@@ -72,7 +72,7 @@ export default function LeadsTable({ oportunidades, clientes, onReciclar, onCanc
                         onClick={() => onReciclar(op)}
                         aria-label={`Reciclar lead: ${op.titulo}`}
                         className="rounded-lg border border-kindra-acento/60 px-3 py-1.5 text-xs font-medium
-                                   text-kindra-acento transition hover:bg-kindra-acento hover:text-white
+                                   text-kindra-acento transition hover:bg-kindra-acento hover:text-kindra-fundo
                                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kindra-acento"
                       >
                         ↻ Reciclar Lead

@@ -28,7 +28,7 @@ export default function Sidebar({ usuario, ativa, onNavegar, onSair }) {
               className={`flex items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm transition
                           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kindra-acento
                           ${atual
-                            ? "bg-kindra-acento text-white shadow-lg shadow-kindra-acento/20"
+                            ? "bg-kindra-acento font-bold text-kindra-fundo shadow-lg shadow-kindra-acento/20"
                             : "text-slate-200 hover:bg-kindra-suporte/40"}`}
             >
               <span aria-hidden="true">{item.icone}</span>

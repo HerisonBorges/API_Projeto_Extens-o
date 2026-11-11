@@ -234,6 +234,22 @@ npm install
 
 npm run dev      # http://localhost:5173 (já liberado no CORS)
 
+Se o caminho da pasta tiver ":" (ex.: "6 Semestre 2026:2"), o servidor de
+desenvolvimento do Vite 8 recusa os arquivos (403). Nesse caso use:
+
+npm run homologacao   # build + preview na mesma porta 5173 (sem hot reload)
+
+
+## Dados de homologação (Loja Fênix)
+
+python3 -m database.seed_fenix             # cria, se não existir
+
+python3 -m database.seed_fenix --resetar   # apaga a Fênix e recria
+
+Logins: gestor@lojafenix.com.br (Gestor, 24/7) e mariana@lojafenix.com.br
+(Atendimento, 08:00-18:00). Senha: SEED_FENIX_SENHA ou "senha123".
+Uso exclusivo em homologação.
+
 A API é lida de VITE_API_URL (padrão http://127.0.0.1:5000).
 
 
