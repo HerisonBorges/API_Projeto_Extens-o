@@ -55,9 +55,9 @@ Executar os cenários de aceite do QA contra o banco do .env
 
 python3 -m unittest tests.aceite_qa -v
 
-Executar a API:
+Executar a API (desenvolvimento, com recarga automática):
 
-python app.py
+FLASK_DEBUG=1 python3 app.py
 
 Rotas de clientes, oportunidades, tarefas, relatórios e dashboard exigem o
 cabeçalho Authorization: Bearer <token>, obtido em POST /auth/login.
@@ -216,9 +216,36 @@ Agende no cron, por exemplo a cada 15 minutos:
 */15 * * * * cd /caminho/do/projeto && python3 -m database.worker_reciclagem
 
 
+## Produção (PaaS)
+
+Comando de start: gunicorn app:app   (lê gunicorn.conf.py; há também um Procfile)
+
+Variáveis obrigatórias no painel da plataforma:
+
+APP_ENV=producao
+SECRET_KEY=<nova, 32+ caracteres, diferente da de desenvolvimento>
+CORS_ORIGINS=https://<seu-front>.netlify.app
+DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, PGSSLMODE=require
+
+A API se recusa a subir (e mostra o motivo no log) se faltar SECRET_KEY
+forte, DB_PASSWORD ou, em produção, CORS_ORIGINS com https. Em produção o
+Swagger fica desligado (SWAGGER_ATIVO=1 liga) e o debug nunca é ativado.
+
+Conexões: cada worker do Gunicorn tem o próprio pool. Total no Supabase =
+WEB_CONCURRENCY x DB_POOL_MAX. Comece com WEB_CONCURRENCY=2 e DB_POOL_MAX=5.
+
+Monitoramento (sem autenticação):
+
+GET /health          liveness (não toca no banco): use como health check do PaaS
+
+GET /health/pronto   readiness (SELECT 1): 503 se o banco estiver fora
+
+Desenvolvimento local: FLASK_DEBUG=1 python3 app.py
+
+
 ## Testes
 
-python3 -m unittest tests.aceite_qa tests.test_reciclagem_horarios tests.test_pool -v
+python3 -m unittest tests.aceite_qa tests.test_reciclagem_horarios tests.test_pool tests.test_interacoes_relatorios tests.test_producao -v
 
 Os testes rodam contra o banco do .env, criam empresas de teste e removem os
 dados ao final.

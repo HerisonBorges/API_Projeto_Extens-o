@@ -8,8 +8,17 @@ from flask import g, jsonify, request
 from database.conexao import conectar_banco
 
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "troque-esta-chave-em-producao")
 EXPIRACAO_HORAS = 8
+
+
+def _chave():
+    """Lida a cada uso, sem valor padrão: config.validar_configuracao() garante,
+    na subida da API, que a chave existe e é forte. Scripts que não usam JWT
+    (ex.: o worker) não precisam dela."""
+    chave = os.environ.get("SECRET_KEY")
+    if not chave:
+        raise RuntimeError("SECRET_KEY não definida.")
+    return chave
 
 # Fuso usado para a janela de acesso. O servidor do banco roda em UTC.
 TZ_EMPRESA = os.environ.get("TZ_EMPRESA", "America/Sao_Paulo")
@@ -53,7 +62,7 @@ def gerar_token(usuario_id, empresa_id, perfil):
         "perfil": perfil,
         "exp": datetime.now(timezone.utc) + timedelta(hours=EXPIRACAO_HORAS),
     }
-    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    return jwt.encode(payload, _chave(), algorithm="HS256")
 
 
 def carregar_acesso_usuario(usuario_id):
@@ -89,7 +98,7 @@ def token_obrigatorio(funcao):
 
         try:
             payload = jwt.decode(
-                cabecalho[7:], SECRET_KEY, algorithms=["HS256"]
+                cabecalho[7:], _chave(), algorithms=["HS256"]
             )
         except jwt.ExpiredSignatureError:
             return jsonify({"erro": "Token expirado."}), 401
