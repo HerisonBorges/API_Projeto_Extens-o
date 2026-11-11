@@ -364,3 +364,86 @@ POST /clientes-padaria
 POST /clientes-oficina
 
 A mesma API deve funcionar para qualquer empresa.
+
+
+## Checklist de Go-Live
+
+Siga na ordem: cada etapa usa algo produzido na anterior.
+
+### 0. Antes de começar
+
+- [ ] Use um projeto Supabase de PRODUÇÃO separado do de homologação. O banco
+      de homologação tem a Loja Fênix, usuários de teste com senha conhecida
+      (senha123) e contas pessoais de teste: nada disso deve ir para produção.
+- [ ] Gere credenciais novas para produção (senha do banco, SECRET_KEY). Não
+      reaproveite as de desenvolvimento nem senhas que já passaram por chat,
+      e-mail ou documentos.
+- [ ] Escolha o nome do site no Netlify (ex.: sandro-crm), que define a URL
+      https://sandro-crm.netlify.app usada no CORS da API.
+
+### 1. Banco de dados (Supabase de produção)
+
+- [ ] Rode as migrações apontando o .env local para o banco de produção:
+      python3 -m database.aplicar_migracoes   (todos os arquivos devem dar OK)
+- [ ] NÃO rode database/seed_fenix.py em produção.
+- [ ] No SQL Editor, rode database/papel_worker.sql e, separadamente:
+      ALTER ROLE sandro_worker PASSWORD '<senha-longa-gerada>';
+- [ ] Use o Session pooler, porta 5432 (o pool da API mantém sessões abertas;
+      a porta 6543, Transaction pooler, não foi testada).
+- [ ] Volte o .env local para o banco de homologação.
+
+### 2. API (PaaS)
+
+- [ ] Start command: gunicorn app:app   (Python da versão em .python-version)
+- [ ] Variáveis: APP_ENV=producao, SECRET_KEY (nova, 32+ caracteres),
+      CORS_ORIGINS=https://<site>.netlify.app, DB_HOST, DB_PORT=5432, DB_NAME,
+      DB_USER, DB_PASSWORD, PGSSLMODE=require, WEB_CONCURRENCY=2, DB_POOL_MAX=5,
+      TZ_EMPRESA=America/Sao_Paulo
+- [ ] Health check da plataforma: /health   (não use /health/pronto aqui: uma
+      oscilação do banco faria a plataforma reiniciar a API sem necessidade)
+- [ ] Depois do deploy, confira:
+      - GET https://<api>/health          -> 200 {"status": "ok"}
+      - GET https://<api>/health/pronto   -> 200 com "banco": "ok"
+      - GET https://<api>/apidocs/        -> 404 (Swagger desligado)
+      - No log da plataforma, nenhuma linha "Configuração inválida".
+
+### 3. Front-end (Netlify)
+
+- [ ] Importe o repositório. Os campos de build vêm do netlify.toml: não altere.
+- [ ] Variável: VITE_API_URL=https://<api>   (sem barra no final)
+- [ ] Publique e confira, no navegador, com o console (F12) aberto:
+      - a tela de login carrega com a marca SANDRO CRM;
+      - nenhum erro de CORS ou de Content-Security-Policy no console;
+      - F5 em qualquer tela mantém a tela.
+
+### 4. Primeiro acesso
+
+- [ ] Crie a empresa e o primeiro Gestor (o banco de produção começa vazio):
+      POST https://<api>/auth/register
+      {"nome_empresa": "...", "nome_usuario": "...", "email": "...", "senha": "..."}
+- [ ] Entre pelo site e percorra as 8 telas: Dashboard, Clientes, Detalhe,
+      Funil, Follow-ups, Relatórios, Configurações e "+ Novo Lead".
+- [ ] Cadastre um cliente e uma oportunidade de teste e mova no funil
+      (os mesmos cenários de tests/aceite_qa.py, feitos à mão). Exclua depois.
+- [ ] Teste a janela de horário: crie um usuário Atendimento, defina um
+      horário que exclua o horário atual e confirme o bloqueio no login.
+
+### 5. Worker de reciclagem (GitHub Actions)
+
+- [ ] Settings > Environments > New environment: producao
+- [ ] Secrets do environment: DB_HOST, DB_PORT=5432, DB_NAME,
+      DB_USER=sandro_worker.<ref-do-projeto>, DB_PASSWORD (a do papel)
+- [ ] Faça o merge de feature/deploy-producao na main SÓ depois dos secrets
+      (sem eles o workflow falha a cada hora e o GitHub envia e-mail).
+- [ ] Actions > "Worker de reciclagem" > Run workflow com simulação ligada:
+      o resumo deve mostrar "Vencidas, que seriam processadas: 0".
+- [ ] Na hora seguinte, confira a primeira execução agendada (verde).
+
+### 6. Depois do go-live
+
+- [ ] Monitore /health com um serviço externo de uptime (opcional).
+- [ ] Repositório público: o GitHub desativa agendamentos após 60 dias sem
+      atividade no repositório. Se o worker parar, reative em Actions.
+- [ ] Rollback: no Netlify, "Publish deploy" de uma versão anterior; na PaaS,
+      redeploy do commit anterior. As migrações só adicionam colunas e tabelas,
+      então a versão anterior do código continua funcionando com o banco novo.
