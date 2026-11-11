@@ -1,0 +1,107 @@
+# Worker de reciclagem pós-venda: roda de hora em hora.
+#
+# Configuração (uma vez), em Settings > Environments > "producao" > Environment secrets:
+#   DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+# Use as credenciais de PRODUÇÃO, de preferência o papel restrito criado por
+# database/papel_worker.sql (só lê/escreve oportunidades). SECRET_KEY não é necessária.
+#
+# Execução manual: Actions > "Worker de reciclagem" > Run workflow
+# (com simulação ligada por padrão, para conferir antes de processar).
+
+name: Worker de reciclagem
+
+on:
+  schedule:
+    # Minuto 7 de cada hora (UTC): foge do pico do minuto 0, quando o GitHub
+    # atrasa ou descarta mais execuções agendadas. A hora em UTC não importa:
+    # o worker compara com NOW() no banco.
+    - cron: "7 * * * *"
+  workflow_dispatch:
+    inputs:
+      simulacao:
+        description: "Só listar (dry-run), sem alterar nada"
+        type: boolean
+        default: true
+      empresa:
+        description: "Restringir a uma empresa_id (vazio = todas)"
+        type: string
+        required: false
+
+# Menor privilégio: o job só lê o código
+permissions:
+  contents: read
+
+# Nunca duas execuções ao mesmo tempo; a próxima espera a atual terminar
+concurrency:
+  group: worker-reciclagem
+  cancel-in-progress: false
+
+jobs:
+  reciclar:
+    name: Processar reciclagens vencidas
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: producao
+
+    env:
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      PGSSLMODE: require
+      DB_POOL_MIN: "1"
+      DB_POOL_MAX: "2"
+      DB_CONNECT_TIMEOUT: "15"
+      DB_APPLICATION_NAME: sandro-crm-worker
+      TZ_EMPRESA: America/Sao_Paulo
+      # Entradas do disparo manual passam por variável de ambiente, nunca
+      # interpoladas no script (evita injeção de comandos)
+      ENTRADA_SIMULACAO: ${{ github.event_name == 'workflow_dispatch' && inputs.simulacao || 'false' }}
+      ENTRADA_EMPRESA: ${{ github.event_name == 'workflow_dispatch' && inputs.empresa || '' }}
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Instalar Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Instalar dependências
+        run: python -m pip install --disable-pip-version-check -r requirements.txt
+
+      - name: Conferir secrets
+        run: |
+          faltando=""
+          for nome in DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD; do
+            [ -n "${!nome}" ] || faltando="$faltando $nome"
+          done
+          if [ -n "$faltando" ]; then
+            echo "::error::Secrets ausentes no environment 'producao':$faltando"
+            exit 1
+          fi
+          echo "Secrets presentes."
+
+      - name: Conferir que o worker carrega nesta versão do Python
+        run: python -c "import database.worker_reciclagem as w; print('worker ok em', __import__('sys').version.split()[0])"
+
+      - name: Executar o worker
+        run: |
+          argumentos=()
+          if [ "$ENTRADA_SIMULACAO" = "true" ]; then
+            argumentos+=(--dry-run)
+          fi
+          if [ -n "$ENTRADA_EMPRESA" ]; then
+            if ! [[ "$ENTRADA_EMPRESA" =~ ^[0-9]+$ ]]; then
+              echo "::error::empresa deve ser um número inteiro."
+              exit 1
+            fi
+            argumentos+=(--empresa "$ENTRADA_EMPRESA")
+          fi
+          python -m database.worker_reciclagem "${argumentos[@]}"

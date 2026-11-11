@@ -211,9 +211,28 @@ python3 -m database.worker_reciclagem --dry-run   # lista sem alterar
 
 python3 -m database.worker_reciclagem             # processa
 
-Agende no cron, por exemplo a cada 15 minutos:
+### Agendamento em produção (GitHub Actions)
 
-*/15 * * * * cd /caminho/do/projeto && python3 -m database.worker_reciclagem
+O workflow .github/workflows/worker_reciclagem.yml roda o worker de hora em
+hora (minuto 7, fora do pico do minuto 0) e pode ser disparado manualmente em
+Actions > "Worker de reciclagem" > Run workflow (simulação ligada por padrão).
+Só roda a partir da branch padrão (main).
+
+Configuração, uma vez:
+
+1. No SQL Editor do Supabase de produção, rode database/papel_worker.sql e
+   depois, separadamente, ALTER ROLE sandro_worker PASSWORD '<senha-gerada>';
+   O papel só lê/escreve oportunidades (sem DELETE, sem clientes/usuários).
+2. Em Settings > Environments, crie "producao" e cadastre os secrets:
+   DB_HOST, DB_PORT, DB_NAME, DB_USER (sandro_worker.<ref-do-projeto>), DB_PASSWORD.
+3. Rode manualmente com simulação ligada e confira o resumo da execução.
+
+Os logs do Actions em repositório público são públicos: o worker imprime só
+IDs, datas e contagens, nunca títulos ou dados de clientes.
+
+Fora do GitHub (servidor próprio), o equivalente em cron:
+
+7 * * * * cd /caminho/do/projeto && python3 -m database.worker_reciclagem
 
 
 ## Produção (PaaS)
@@ -245,7 +264,7 @@ Desenvolvimento local: FLASK_DEBUG=1 python3 app.py
 
 ## Testes
 
-python3 -m unittest tests.aceite_qa tests.test_reciclagem_horarios tests.test_pool tests.test_interacoes_relatorios tests.test_producao -v
+python3 -m unittest tests.aceite_qa tests.test_reciclagem_horarios tests.test_pool tests.test_interacoes_relatorios tests.test_producao tests.test_workflow -v
 
 Os testes rodam contra o banco do .env, criam empresas de teste e removem os
 dados ao final.

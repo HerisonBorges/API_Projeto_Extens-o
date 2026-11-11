@@ -18,7 +18,9 @@ Agendamento sugerido (cron, a cada 15 minutos):
 que cada agendamento é processado uma única vez.
 """
 import argparse
+import os
 import sys
+from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 
@@ -117,6 +119,14 @@ def processar_reciclagens(empresa_id=None):
     ]
 
 
+def _resumo_github(linhas):
+    """No GitHub Actions, publica o resultado na página da execução."""
+    destino = os.getenv("GITHUB_STEP_SUMMARY")
+    if destino:
+        with open(destino, "a", encoding="utf-8") as arquivo:
+            arquivo.write("\n".join(linhas) + "\n")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Worker de reciclagem pós-venda.")
     parser.add_argument("--dry-run", action="store_true",
@@ -125,18 +135,36 @@ def main(argv=None):
                         help="Processa apenas esta empresa_id.")
     args = parser.parse_args(argv)
 
+    inicio = datetime.now(timezone.utc)
+    escopo = f"empresa {args.empresa}" if args.empresa is not None else "todas as empresas"
+
+    # Saída SEM títulos ou dados de clientes: logs de Actions em repositório
+    # público são públicos. Só IDs, datas e contagens.
     if args.dry_run:
         vencidas = listar_vencidas(args.empresa)
-        print(f"[dry-run] {len(vencidas)} reciclagem(ns) vencida(s).")
-        for op_id, empresa, titulo, data in vencidas:
-            print(f"  oportunidade {op_id} (empresa {empresa}) '{titulo}' agendada para {data.isoformat()}")
+        print(f"{inicio:%Y-%m-%d %H:%M:%S}Z [dry-run] {len(vencidas)} reciclagem(ns) vencida(s) ({escopo}).")
+        for op_id, empresa, _titulo, data in vencidas:
+            print(f"  oportunidade {op_id} (empresa {empresa}) agendada para {data.isoformat()}")
+        _resumo_github([
+            "### Reciclagem pós-venda (simulação)",
+            f"- Escopo: {escopo}",
+            f"- Vencidas, que seriam processadas: **{len(vencidas)}**",
+        ])
         return 0
 
     criadas = processar_reciclagens(args.empresa)
-    print(f"{len(criadas)} reciclagem(ns) processada(s).")
+    duracao = (datetime.now(timezone.utc) - inicio).total_seconds()
+    print(f"{inicio:%Y-%m-%d %H:%M:%S}Z {len(criadas)} reciclagem(ns) processada(s) "
+          f"({escopo}) em {duracao:.1f}s.")
     for item in criadas:
         print(f"  origem {item['origem_id']} -> nova oportunidade {item['nova_id']} "
               f"(empresa {item['empresa_id']})")
+    _resumo_github([
+        "### Reciclagem pós-venda",
+        f"- Escopo: {escopo}",
+        f"- Processadas: **{len(criadas)}** em {duracao:.1f}s",
+        f"- Empresas afetadas: {len({c['empresa_id'] for c in criadas})}",
+    ])
     return 0
 
 
