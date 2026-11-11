@@ -281,7 +281,28 @@ Logins: gestor@lojafenix.com.br (Gestor, 24/7) e mariana@lojafenix.com.br
 (Atendimento, 08:00-18:00). Senha: SEED_FENIX_SENHA ou "senha123".
 Uso exclusivo em homologação.
 
-A API é lida de VITE_API_URL (padrão http://127.0.0.1:5000).
+A API é lida de VITE_API_URL (padrão local: http://127.0.0.1:5000).
+
+
+## Publicação do front no Netlify
+
+O netlify.toml na raiz já configura tudo (base frontend/, build, Node 22,
+fallback de rotas, cabeçalhos de segurança e cache). No Netlify:
+
+1. Add new site > Import an existing project > escolha este repositório.
+   Os campos de build vêm do netlify.toml: não altere.
+2. Site configuration > Environment variables: VITE_API_URL=https://<sua-api>
+   (sem barra no final). Sem ela o build falha com a mensagem do motivo.
+3. Publique e copie a URL do site (ex.: https://sandro-crm.netlify.app).
+4. Na API, cadastre essa URL em CORS_ORIGINS e reinicie a API.
+
+Checagens locais do build de produção:
+
+VITE_API_URL=https://<sua-api> npm run build   # falha se faltar a URL ou se não for https
+
+Cabeçalhos: CSP que só permite scripts/estilos do próprio site e chamadas
+HTTPS, bloqueio de iframe (X-Frame-Options/frame-ancestors), nosniff e
+Referrer-Policy. O site usa noindex: não aparece em buscadores.
 
 
 ## Padrão para novas rotas

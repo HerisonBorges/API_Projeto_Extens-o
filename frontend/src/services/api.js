@@ -1,4 +1,6 @@
-const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:5000";
+// Em produção o build garante VITE_API_URL em https (vite.config.js).
+// Em desenvolvimento/homologação local, cai na API local.
+const API_URL = (import.meta.env.VITE_API_URL || "http://127.0.0.1:5000").trim().replace(/\/+$/, "");
 
 const CHAVE_TOKEN = "sandro.token";
 const CHAVE_USUARIO = "sandro.usuario";
