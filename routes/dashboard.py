@@ -1,6 +1,7 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, g, jsonify
 
 from database.conexao import conectar_banco
+from seguranca import token_obrigatorio
 
 
 dashboard_bp = Blueprint(
@@ -11,7 +12,11 @@ dashboard_bp = Blueprint(
 
 
 @dashboard_bp.route("/<int:empresa_id>", methods=["GET"])
+@token_obrigatorio
 def buscar_dashboard(empresa_id):
+    if empresa_id != g.empresa_id:
+        return jsonify({"erro": "Acesso negado."}), 403
+
     conexao = conectar_banco()
     cursor = conexao.cursor()
 

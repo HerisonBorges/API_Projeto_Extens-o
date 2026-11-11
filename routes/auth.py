@@ -2,6 +2,13 @@ from flask import Blueprint, jsonify, request
 import bcrypt
 
 from database.conexao import conectar_banco
+from seguranca import (
+    SQL_DENTRO_JANELA,
+    TZ_EMPRESA,
+    formatar_hora,
+    gerar_token,
+    resposta_horario_bloqueado,
+)
 
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
@@ -72,11 +79,14 @@ def login():
     conexao = conectar_banco()
     cursor = conexao.cursor()
 
-    cursor.execute("""
-        SELECT id, empresa_id, nome, email, senha
+    cursor.execute(f"""
+        SELECT id, empresa_id, nome, email, senha, perfil,
+               hora_inicio_acesso, hora_fim_acesso,
+               {SQL_DENTRO_JANELA},
+               (SELECT e.nome FROM empresas e WHERE e.id = usuarios.empresa_id)
         FROM usuarios
-        WHERE email = %s;
-    """, (email,))
+        WHERE email = %(email)s;
+    """, {"email": email, "tz": TZ_EMPRESA})
 
     usuario = cursor.fetchone()
 
@@ -98,13 +108,24 @@ def login():
             "erro": "Senha incorreta."
         }), 401
 
+    # Janela checada só depois da senha: não revela horários a quem não autenticou
+    if not usuario[8]:
+        return resposta_horario_bloqueado(usuario[6], usuario[7])
+
+    token = gerar_token(usuario[0], usuario[1], usuario[5])
+
     return jsonify({
         "mensagem": "Login realizado com sucesso!",
+        "token": token,
         "usuario": {
             "id": usuario[0],
             "empresa_id": usuario[1],
+            "empresa_nome": usuario[9],
             "nome": usuario[2],
-            "email": usuario[3]
+            "email": usuario[3],
+            "perfil": usuario[5],
+            "hora_inicio_acesso": formatar_hora(usuario[6]),
+            "hora_fim_acesso": formatar_hora(usuario[7])
         }
     }), 200
 

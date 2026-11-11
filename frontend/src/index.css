@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+/* SANDRO CRM — identidade visual */
+@theme {
+  --color-sandro-fundo: #05161a;
+  --color-sandro-painel: #072e33;
+  --color-sandro-borda: #0c7075;
+  --color-sandro-suporte: #294d61;
+  --color-sandro-acento: #0f969c;
+  --color-sandro-label: #6da5c0;
+  --color-sandro-azul: #204c94;
+  --color-sandro-azul-claro: #4a68d0;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-sandro-fundo);
+}
+
+/* Ícone nativo do relógio/calendário legível no tema escuro */
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
