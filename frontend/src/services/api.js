@@ -129,6 +129,8 @@ export const listarAuditoria = (limite = 30) => requisicao(`/usuarios/auditoria?
 export const listarClientes = () => requisicao("/clientes");
 export const buscarCliente = (id) => requisicao(`/clientes/${id}`);
 export const criarCliente = (dados) => requisicao("/clientes", { method: "POST", body: dados });
+/** Alteração parcial: envie só os campos que mudaram. */
+export const alterarCliente = (id, dados) => requisicao(`/clientes/${id}`, { method: "PUT", body: dados });
 export const excluirCliente = (id) => requisicao(`/clientes/${id}`, { method: "DELETE" });
 
 // ---- Oportunidades / Funil ------------------------------------------------

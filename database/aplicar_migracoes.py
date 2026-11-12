@@ -22,6 +22,7 @@ ARQUIVOS = [
     "migracao_reciclagem_horarios.sql",
     "migracao_interacoes_responsavel.sql",
     "migracao_iam_usuarios.sql",
+    "migracao_clientes_edicao.sql",
 ]
 
 
