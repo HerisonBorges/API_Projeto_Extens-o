@@ -180,11 +180,19 @@ class HealthEErros(unittest.TestCase):
         self.assertEqual(self.c.delete("/health").status_code, 405)
 
     def test_05_corpo_que_nao_e_json_recebe_erro_json(self):
-        """Dado um login com corpo texto / Então 415 em JSON e português, sem traceback."""
+        """Dado um login com corpo texto / Então 400 em JSON e português, sem traceback."""
         r = self.c.post("/auth/login", data="isto não é json", content_type="text/plain")
-        self.assertEqual(r.status_code, 415)
-        self.assertEqual(r.get_json(), {"erro": "Envie o corpo em JSON."})
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.get_json(), {"erro": "E-mail e senha são obrigatórios."})
         self.assertNotIn("Traceback", r.get_data(as_text=True))
+
+    def test_05b_415_continua_em_json_e_portugues(self):
+        """Dado uma rota que exige JSON estrito / Então o 415 sai traduzido."""
+        from werkzeug.exceptions import UnsupportedMediaType
+        from app import erro_http
+        with self.app.test_request_context("/"):
+            resposta, codigo = erro_http(UnsupportedMediaType())
+        self.assertEqual((codigo, resposta.get_json()), (415, {"erro": "Envie o corpo em JSON."}))
 
     def test_06_excecao_inesperada_vira_500_generico(self):
         """Dado uma exceção não tratada / Então 500 genérico; detalhe só no log."""

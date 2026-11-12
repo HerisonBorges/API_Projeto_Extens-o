@@ -28,6 +28,7 @@ from routes.interacoes import interacoes_bp  # noqa: E402
 from routes.oportunidades import oportunidades_bp  # noqa: E402
 from routes.relatorios import relatorios_bp  # noqa: E402
 from routes.tarefas import tarefas_bp  # noqa: E402
+from routes.usuarios import usuarios_bp  # noqa: E402
 
 PRODUCAO = em_producao()
 
@@ -63,6 +64,7 @@ for blueprint in (
     tarefas_bp,
     relatorios_bp,
     interacoes_bp,
+    usuarios_bp,
 ):
     app.register_blueprint(blueprint)
 

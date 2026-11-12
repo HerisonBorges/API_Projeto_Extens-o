@@ -10,7 +10,7 @@ const ICONES = {
   configuracoes: "⚙",
 };
 
-export default function Sidebar({ usuario, ativa, onSair }) {
+export default function Sidebar({ usuario, ativa, onSair, onAlterarSenha }) {
   const itens = Object.keys(ROTAS).filter((pagina) => podeAcessar(pagina, usuario.perfil));
 
   return (
@@ -57,14 +57,24 @@ export default function Sidebar({ usuario, ativa, onSair }) {
             <p className="text-xs text-sandro-label">{usuario.perfil}</p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onSair}
-          className="mt-4 text-xs text-sandro-label underline-offset-4 hover:text-white hover:underline
-                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sandro-acento"
-        >
-          Sair
-        </button>
+        <div className="mt-4 flex gap-4">
+          <button
+            type="button"
+            onClick={onAlterarSenha}
+            className="text-xs text-sandro-label underline-offset-4 hover:text-white hover:underline
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sandro-acento"
+          >
+            Alterar minha senha
+          </button>
+          <button
+            type="button"
+            onClick={onSair}
+            className="text-xs text-sandro-label underline-offset-4 hover:text-white hover:underline
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sandro-acento"
+          >
+            Sair
+          </button>
+        </div>
       </div>
     </aside>
   );

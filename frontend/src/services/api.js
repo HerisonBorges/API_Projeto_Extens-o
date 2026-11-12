@@ -13,11 +13,21 @@ export class ApiError extends Error {
   }
 }
 
-// Callback registrado pelo App para voltar à tela de login
+// Callbacks registrados pelo App: voltar ao login / exigir troca de senha
 let aoEncerrarSessao = () => {};
+let aoExigirTrocaSenha = () => {};
 
 export function definirAoEncerrarSessao(callback) {
   aoEncerrarSessao = callback;
+}
+
+export function definirAoExigirTrocaSenha(callback) {
+  aoExigirTrocaSenha = callback;
+}
+
+function salvarSessao(token, usuario) {
+  sessionStorage.setItem(CHAVE_TOKEN, token);
+  sessionStorage.setItem(CHAVE_USUARIO, JSON.stringify(usuario));
 }
 
 export function lerSessao() {
@@ -63,13 +73,20 @@ async function requisicao(caminho, { method = "GET", body } = {}) {
     throw new ApiError(403, corpo.message, "HORARIO_BLOQUEADO");
   }
 
+  // Sessão derrubada pelo servidor: expirou, senha trocada, conta desativada etc.
   if (resposta.status === 401 && token) {
-    encerrarSessao("Sua sessão expirou. Entre novamente.");
-    throw new ApiError(401, "Sessão expirada.");
+    const motivo = corpo.erro ?? "Sua sessão expirou. Entre novamente.";
+    encerrarSessao(motivo);
+    throw new ApiError(401, motivo, corpo.error);
+  }
+
+  if (resposta.status === 403 && corpo.error === "TROCA_SENHA_OBRIGATORIA") {
+    aoExigirTrocaSenha();
+    throw new ApiError(403, corpo.erro, "TROCA_SENHA_OBRIGATORIA");
   }
 
   if (!resposta.ok) {
-    throw new ApiError(resposta.status, corpo.erro ?? corpo.message ?? "Erro inesperado.");
+    throw new ApiError(resposta.status, corpo.erro ?? corpo.message ?? "Erro inesperado.", corpo.error);
   }
 
   return corpo;
@@ -85,10 +102,28 @@ const comQuery = (caminho, params) => {
 // ---- Autenticação ---------------------------------------------------------
 export async function entrar(email, senha) {
   const corpo = await requisicao("/auth/login", { method: "POST", body: { email, senha } });
-  sessionStorage.setItem(CHAVE_TOKEN, corpo.token);
-  sessionStorage.setItem(CHAVE_USUARIO, JSON.stringify(corpo.usuario));
+  salvarSessao(corpo.token, corpo.usuario);
   return corpo.usuario;
 }
+
+/** Troca a própria senha. O servidor encerra as outras sessões e devolve um token novo. */
+export async function alterarMinhaSenha(senhaAtual, novaSenha) {
+  const corpo = await requisicao("/auth/senha", {
+    method: "PUT",
+    body: { senha_atual: senhaAtual, nova_senha: novaSenha },
+  });
+  salvarSessao(corpo.token, corpo.usuario);
+  return corpo.usuario;
+}
+
+// ---- Usuários (somente Gestor) ---------------------------------------------
+export const listarUsuarios = () => requisicao("/usuarios");
+export const criarUsuario = (dados) => requisicao("/usuarios", { method: "POST", body: dados });
+export const alterarUsuario = (id, dados) => requisicao(`/usuarios/${id}`, { method: "PUT", body: dados });
+export const redefinirSenhaUsuario = (id) => requisicao(`/usuarios/${id}/redefinir-senha`, { method: "POST" });
+export const desativarUsuario = (id) => requisicao(`/usuarios/${id}/desativar`, { method: "POST" });
+export const reativarUsuario = (id) => requisicao(`/usuarios/${id}/reativar`, { method: "POST" });
+export const listarAuditoria = (limite = 30) => requisicao(`/usuarios/auditoria?limite=${limite}`);
 
 // ---- Clientes -------------------------------------------------------------
 export const listarClientes = () => requisicao("/clientes");

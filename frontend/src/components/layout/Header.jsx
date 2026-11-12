@@ -1,6 +1,6 @@
 import Botao from "../ui/Botao.jsx";
 
-export default function Header({ titulo, usuario, onNovoLead, onSair }) {
+export default function Header({ titulo, usuario, onNovoLead, onSair, onAlterarSenha }) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-sandro-borda/20 pb-5">
       <div>
@@ -10,6 +10,9 @@ export default function Header({ titulo, usuario, onNovoLead, onSair }) {
         </p>
       </div>
       <div className="flex items-center gap-3">
+        <Botao variante="fantasma" tamanho="sm" onClick={onAlterarSenha} className="md:hidden">
+          Alterar senha
+        </Botao>
         <Botao variante="fantasma" tamanho="sm" onClick={onSair} className="md:hidden">
           Sair
         </Botao>
