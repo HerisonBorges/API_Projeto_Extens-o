@@ -71,6 +71,9 @@ def _criar_pool():
         database=os.getenv("DB_NAME", "crm_db"),
         user=os.getenv("DB_USER", "postgres"),
         password=senha,
+        # Sem isso, um banco inacessível trava o worker do Gunicorn indefinidamente
+        connect_timeout=int(os.getenv("DB_CONNECT_TIMEOUT", "10")),
+        application_name=os.getenv("DB_APPLICATION_NAME", "sandro-crm-api"),
     )
 
 

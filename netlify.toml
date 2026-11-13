@@ -1,0 +1,48 @@
+# Netlify: front-end React (Vite) do SANDRO CRM.
+# Este arquivo fica na RAIZ do repositório porque define o "base" (o front está em frontend/).
+# Os caminhos abaixo são relativos ao base.
+#
+# Variável obrigatória no painel (Site configuration > Environment variables):
+#   VITE_API_URL = https://<sua-api>   (sem barra no final)
+# Sem ela o build falha de propósito (ver frontend/vite.config.js).
+
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Vite 8 exige Node ^20.19 ou >=22.12
+  NODE_VERSION = "22"
+
+# As rotas do app usam hash (#/clientes/12): o servidor sempre recebe "/" e o F5
+# já funciona. Esta regra é uma rede de segurança para links sem hash (ex.: /clientes),
+# que passam a abrir o app em vez de 404. Arquivos reais (assets) têm prioridade.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Cabeçalhos de segurança para todas as páginas.
+# CSP: só scripts e estilos do próprio site; chamadas de rede só para HTTPS
+# (a API). Para restringir à URL exata da API, troque "https:" pelo endereço dela.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"
+
+# Arquivos com hash no nome nunca mudam: cache longo
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# index.html sempre revalida, para cada deploy chegar na hora
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"

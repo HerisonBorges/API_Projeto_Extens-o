@@ -55,9 +55,9 @@ Executar os cenários de aceite do QA contra o banco do .env
 
 python3 -m unittest tests.aceite_qa -v
 
-Executar a API:
+Executar a API (desenvolvimento, com recarga automática):
 
-python app.py
+FLASK_DEBUG=1 python3 app.py
 
 Rotas de clientes, oportunidades, tarefas, relatórios e dashboard exigem o
 cabeçalho Authorization: Bearer <token>, obtido em POST /auth/login.
@@ -211,14 +211,60 @@ python3 -m database.worker_reciclagem --dry-run   # lista sem alterar
 
 python3 -m database.worker_reciclagem             # processa
 
-Agende no cron, por exemplo a cada 15 minutos:
+### Agendamento em produção (GitHub Actions)
 
-*/15 * * * * cd /caminho/do/projeto && python3 -m database.worker_reciclagem
+O workflow .github/workflows/worker_reciclagem.yml roda o worker de hora em
+hora (minuto 7, fora do pico do minuto 0) e pode ser disparado manualmente em
+Actions > "Worker de reciclagem" > Run workflow (simulação ligada por padrão).
+Só roda a partir da branch padrão (main).
+
+Configuração, uma vez:
+
+1. No SQL Editor do Supabase de produção, rode database/papel_worker.sql e
+   depois, separadamente, ALTER ROLE sandro_worker PASSWORD '<senha-gerada>';
+   O papel só lê/escreve oportunidades (sem DELETE, sem clientes/usuários).
+2. Em Settings > Environments, crie "producao" e cadastre os secrets:
+   DB_HOST, DB_PORT, DB_NAME, DB_USER (sandro_worker.<ref-do-projeto>), DB_PASSWORD.
+3. Rode manualmente com simulação ligada e confira o resumo da execução.
+
+Os logs do Actions em repositório público são públicos: o worker imprime só
+IDs, datas e contagens, nunca títulos ou dados de clientes.
+
+Fora do GitHub (servidor próprio), o equivalente em cron:
+
+7 * * * * cd /caminho/do/projeto && python3 -m database.worker_reciclagem
+
+
+## Produção (PaaS)
+
+Comando de start: gunicorn app:app   (lê gunicorn.conf.py; há também um Procfile)
+
+Variáveis obrigatórias no painel da plataforma:
+
+APP_ENV=producao
+SECRET_KEY=<nova, 32+ caracteres, diferente da de desenvolvimento>
+CORS_ORIGINS=https://<seu-front>.netlify.app
+DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, PGSSLMODE=require
+
+A API se recusa a subir (e mostra o motivo no log) se faltar SECRET_KEY
+forte, DB_PASSWORD ou, em produção, CORS_ORIGINS com https. Em produção o
+Swagger fica desligado (SWAGGER_ATIVO=1 liga) e o debug nunca é ativado.
+
+Conexões: cada worker do Gunicorn tem o próprio pool. Total no Supabase =
+WEB_CONCURRENCY x DB_POOL_MAX. Comece com WEB_CONCURRENCY=2 e DB_POOL_MAX=5.
+
+Monitoramento (sem autenticação):
+
+GET /health          liveness (não toca no banco): use como health check do PaaS
+
+GET /health/pronto   readiness (SELECT 1): 503 se o banco estiver fora
+
+Desenvolvimento local: FLASK_DEBUG=1 python3 app.py
 
 
 ## Testes
 
-python3 -m unittest tests.aceite_qa tests.test_reciclagem_horarios tests.test_pool -v
+python3 -m unittest tests.aceite_qa tests.test_reciclagem_horarios tests.test_pool tests.test_interacoes_relatorios tests.test_producao tests.test_workflow -v
 
 Os testes rodam contra o banco do .env, criam empresas de teste e removem os
 dados ao final.
@@ -254,7 +300,28 @@ Logins: gestor@lojafenix.com.br (Gestor, 24/7) e mariana@lojafenix.com.br
 (Atendimento, 08:00-18:00). Senha: SEED_FENIX_SENHA ou "senha123".
 Uso exclusivo em homologação.
 
-A API é lida de VITE_API_URL (padrão http://127.0.0.1:5000).
+A API é lida de VITE_API_URL (padrão local: http://127.0.0.1:5000).
+
+
+## Publicação do front no Netlify
+
+O netlify.toml na raiz já configura tudo (base frontend/, build, Node 22,
+fallback de rotas, cabeçalhos de segurança e cache). No Netlify:
+
+1. Add new site > Import an existing project > escolha este repositório.
+   Os campos de build vêm do netlify.toml: não altere.
+2. Site configuration > Environment variables: VITE_API_URL=https://<sua-api>
+   (sem barra no final). Sem ela o build falha com a mensagem do motivo.
+3. Publique e copie a URL do site (ex.: https://sandro-crm.netlify.app).
+4. Na API, cadastre essa URL em CORS_ORIGINS e reinicie a API.
+
+Checagens locais do build de produção:
+
+VITE_API_URL=https://<sua-api> npm run build   # falha se faltar a URL ou se não for https
+
+Cabeçalhos: CSP que só permite scripts/estilos do próprio site e chamadas
+HTTPS, bloqueio de iframe (X-Frame-Options/frame-ancestors), nosniff e
+Referrer-Policy. O site usa noindex: não aparece em buscadores.
 
 
 ## Padrão para novas rotas
@@ -297,3 +364,86 @@ POST /clientes-padaria
 POST /clientes-oficina
 
 A mesma API deve funcionar para qualquer empresa.
+
+
+## Checklist de Go-Live
+
+Siga na ordem: cada etapa usa algo produzido na anterior.
+
+### 0. Antes de começar
+
+- [ ] Use um projeto Supabase de PRODUÇÃO separado do de homologação. O banco
+      de homologação tem a Loja Fênix, usuários de teste com senha conhecida
+      (senha123) e contas pessoais de teste: nada disso deve ir para produção.
+- [ ] Gere credenciais novas para produção (senha do banco, SECRET_KEY). Não
+      reaproveite as de desenvolvimento nem senhas que já passaram por chat,
+      e-mail ou documentos.
+- [ ] Escolha o nome do site no Netlify (ex.: sandro-crm), que define a URL
+      https://sandro-crm.netlify.app usada no CORS da API.
+
+### 1. Banco de dados (Supabase de produção)
+
+- [ ] Rode as migrações apontando o .env local para o banco de produção:
+      python3 -m database.aplicar_migracoes   (todos os arquivos devem dar OK)
+- [ ] NÃO rode database/seed_fenix.py em produção.
+- [ ] No SQL Editor, rode database/papel_worker.sql e, separadamente:
+      ALTER ROLE sandro_worker PASSWORD '<senha-longa-gerada>';
+- [ ] Use o Session pooler, porta 5432 (o pool da API mantém sessões abertas;
+      a porta 6543, Transaction pooler, não foi testada).
+- [ ] Volte o .env local para o banco de homologação.
+
+### 2. API (PaaS)
+
+- [ ] Start command: gunicorn app:app   (Python da versão em .python-version)
+- [ ] Variáveis: APP_ENV=producao, SECRET_KEY (nova, 32+ caracteres),
+      CORS_ORIGINS=https://<site>.netlify.app, DB_HOST, DB_PORT=5432, DB_NAME,
+      DB_USER, DB_PASSWORD, PGSSLMODE=require, WEB_CONCURRENCY=2, DB_POOL_MAX=5,
+      TZ_EMPRESA=America/Sao_Paulo
+- [ ] Health check da plataforma: /health   (não use /health/pronto aqui: uma
+      oscilação do banco faria a plataforma reiniciar a API sem necessidade)
+- [ ] Depois do deploy, confira:
+      - GET https://<api>/health          -> 200 {"status": "ok"}
+      - GET https://<api>/health/pronto   -> 200 com "banco": "ok"
+      - GET https://<api>/apidocs/        -> 404 (Swagger desligado)
+      - No log da plataforma, nenhuma linha "Configuração inválida".
+
+### 3. Front-end (Netlify)
+
+- [ ] Importe o repositório. Os campos de build vêm do netlify.toml: não altere.
+- [ ] Variável: VITE_API_URL=https://<api>   (sem barra no final)
+- [ ] Publique e confira, no navegador, com o console (F12) aberto:
+      - a tela de login carrega com a marca SANDRO CRM;
+      - nenhum erro de CORS ou de Content-Security-Policy no console;
+      - F5 em qualquer tela mantém a tela.
+
+### 4. Primeiro acesso
+
+- [ ] Crie a empresa e o primeiro Gestor (o banco de produção começa vazio):
+      POST https://<api>/auth/register
+      {"nome_empresa": "...", "nome_usuario": "...", "email": "...", "senha": "..."}
+- [ ] Entre pelo site e percorra as 8 telas: Dashboard, Clientes, Detalhe,
+      Funil, Follow-ups, Relatórios, Configurações e "+ Novo Lead".
+- [ ] Cadastre um cliente e uma oportunidade de teste e mova no funil
+      (os mesmos cenários de tests/aceite_qa.py, feitos à mão). Exclua depois.
+- [ ] Teste a janela de horário: crie um usuário Atendimento, defina um
+      horário que exclua o horário atual e confirme o bloqueio no login.
+
+### 5. Worker de reciclagem (GitHub Actions)
+
+- [ ] Settings > Environments > New environment: producao
+- [ ] Secrets do environment: DB_HOST, DB_PORT=5432, DB_NAME,
+      DB_USER=sandro_worker.<ref-do-projeto>, DB_PASSWORD (a do papel)
+- [ ] Faça o merge de feature/deploy-producao na main SÓ depois dos secrets
+      (sem eles o workflow falha a cada hora e o GitHub envia e-mail).
+- [ ] Actions > "Worker de reciclagem" > Run workflow com simulação ligada:
+      o resumo deve mostrar "Vencidas, que seriam processadas: 0".
+- [ ] Na hora seguinte, confira a primeira execução agendada (verde).
+
+### 6. Depois do go-live
+
+- [ ] Monitore /health com um serviço externo de uptime (opcional).
+- [ ] Repositório público: o GitHub desativa agendamentos após 60 dias sem
+      atividade no repositório. Se o worker parar, reative em Actions.
+- [ ] Rollback: no Netlify, "Publish deploy" de uma versão anterior; na PaaS,
+      redeploy do commit anterior. As migrações só adicionam colunas e tabelas,
+      então a versão anterior do código continua funcionando com o banco novo.

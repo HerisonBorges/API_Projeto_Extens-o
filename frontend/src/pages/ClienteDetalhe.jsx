@@ -11,9 +11,11 @@ import {
   formatarDataHora,
   formatarMoeda,
 } from "../components/ui/formatos.js";
+import EditarClienteModal from "../components/clientes/EditarClienteModal.jsx";
 import { buscarCliente, criarInteracao, listarInteracoes, listarOportunidades } from "../services/api.js";
 
 const ICONE_TIPO = { "Ligação": "☎", WhatsApp: "✆", "E-mail": "✉", "Reunião": "◎" };
+const TOM_STATUS = { Lead: "azul", Cliente: "permitido", Inativo: "neutro" };
 
 function Dado({ rotulo, children }) {
   return (
@@ -106,6 +108,8 @@ function NovaInteracao({ clienteId, oportunidades, onSalva }) {
 export default function ClienteDetalhe({ id, versao }) {
   const [dados, setDados] = useState(null);
   const [erro, setErro] = useState(null);
+  const [editando, setEditando] = useState(false);
+  const [aviso, setAviso] = useState(null);
 
   const carregar = useCallback(async () => {
     setErro(null);
@@ -148,13 +152,30 @@ export default function ClienteDetalhe({ id, versao }) {
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Coluna esquerda: cadastro e oportunidades */}
         <div className="space-y-6 lg:col-span-2">
-          <Card titulo={cliente.nome} acao={<StatusBadge tom={cliente.status === "Inativo" ? "neutro" : "azul"}>{cliente.status}</StatusBadge>}>
+          <Card
+            titulo={cliente.nome}
+            acao={
+              <div className="flex items-center gap-2">
+                <StatusBadge tom={TOM_STATUS[cliente.status] ?? "neutro"}>{cliente.status}</StatusBadge>
+                <Botao tamanho="sm" variante="secundario" onClick={() => setEditando(true)}
+                       aria-label={`Editar dados de ${cliente.nome}`}>
+                  Editar
+                </Botao>
+              </div>
+            }
+          >
             <dl className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
               <Dado rotulo="E-mail">{cliente.email}</Dado>
               <Dado rotulo="Telefone">{cliente.telefone}</Dado>
               <Dado rotulo="Código">#{cliente.id}</Dado>
               <Dado rotulo="Interações">{interacoes.length}</Dado>
             </dl>
+            <p role="status" className="border-t border-sandro-borda/20 px-5 py-2 text-xs text-sandro-label">
+              {aviso ?? (cliente.atualizado_em
+                ? `Última alteração em ${formatarDataHora(cliente.atualizado_em)}` +
+                  (cliente.atualizado_por_nome ? ` por ${cliente.atualizado_por_nome}` : "")
+                : "Dados não alterados desde o cadastro.")}
+            </p>
           </Card>
 
           <Card titulo="Oportunidades associadas">
@@ -220,6 +241,18 @@ export default function ClienteDetalhe({ id, versao }) {
           </Card>
         </div>
       </div>
+
+      {editando && (
+        <EditarClienteModal
+          cliente={cliente}
+          onFechar={() => setEditando(false)}
+          onSalvo={(atualizado) => {
+            setDados((d) => ({ ...d, cliente: atualizado }));
+            setEditando(false);
+            setAviso(`Dados de ${atualizado.nome} salvos.`);
+          }}
+        />
+      )}
     </div>
   );
 }

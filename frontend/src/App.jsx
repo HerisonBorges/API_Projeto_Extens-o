@@ -12,8 +12,16 @@ import Followups from "./pages/Followups.jsx";
 import Funil from "./pages/Funil.jsx";
 import Login from "./pages/Login.jsx";
 import Relatorios from "./pages/Relatorios.jsx";
+import FormularioNovaSenha from "./components/conta/FormularioNovaSenha.jsx";
+import Modal from "./components/ui/Modal.jsx";
+import TrocaSenhaObrigatoria from "./pages/TrocaSenhaObrigatoria.jsx";
 import { ROTAS, navegar, podeAcessar, useRota } from "./rotas.js";
-import { definirAoEncerrarSessao, encerrarSessao, lerSessao } from "./services/api.js";
+import {
+  definirAoEncerrarSessao,
+  definirAoExigirTrocaSenha,
+  encerrarSessao,
+  lerSessao,
+} from "./services/api.js";
 
 const PAGINAS = {
   dashboard: Dashboard,
@@ -33,12 +41,19 @@ export default function App() {
   const [versao, setVersao] = useState(0);
   const rota = useRota();
 
-  // Qualquer HORARIO_BLOQUEADO, 401 ou "Sair" cai aqui e volta ao login
+  const [alterandoSenha, setAlterandoSenha] = useState(false);
+
+  // Qualquer HORARIO_BLOQUEADO, 401 (sessão encerrada, conta desativada) ou "Sair"
+  // cai aqui e volta ao login. TROCA_SENHA_OBRIGATORIA leva à tela de nova senha.
   useEffect(() => {
     definirAoEncerrarSessao((motivo) => {
       setUsuario(null);
       setNovoLead(false);
+      setAlterandoSenha(false);
       setAvisoLogin(motivo);
+    });
+    definirAoExigirTrocaSenha(() => {
+      setUsuario((u) => (u ? { ...u, deve_trocar_senha: true } : u));
     });
   }, []);
 
@@ -66,6 +81,20 @@ export default function App() {
     );
   }
 
+  // Senha temporária: nenhuma tela do sistema antes da troca
+  if (usuario.deve_trocar_senha) {
+    return (
+      <TrocaSenhaObrigatoria
+        usuario={usuario}
+        onConcluido={(u) => {
+          setUsuario(u);
+          setAviso("Senha definida. Bem-vindo(a) ao SANDRO CRM.");
+        }}
+        onSair={() => encerrarSessao(null)}
+      />
+    );
+  }
+
   const detalheCliente = rota.pagina === "clientes" && rota.id;
   const Pagina = PAGINAS[permitido ? rota.pagina : "dashboard"];
 
@@ -77,7 +106,8 @@ export default function App() {
         Pular para o conteúdo
       </a>
 
-      <Sidebar usuario={usuario} ativa={rota.pagina} onSair={() => encerrarSessao(null)} />
+      <Sidebar usuario={usuario} ativa={rota.pagina} onSair={() => encerrarSessao(null)}
+               onAlterarSenha={() => setAlterandoSenha(true)} />
 
       <div className="min-w-0 flex-1">
         <main id="conteudo" tabIndex={-1} className="space-y-6 p-4 focus:outline-none md:p-8">
@@ -86,6 +116,7 @@ export default function App() {
             usuario={usuario}
             onNovoLead={() => setNovoLead(true)}
             onSair={() => encerrarSessao(null)}
+            onAlterarSenha={() => setAlterandoSenha(true)}
           />
           <Aviso mensagem={aviso} />
 
@@ -94,6 +125,21 @@ export default function App() {
             : <Pagina usuario={usuario} versao={versao} />}
         </main>
       </div>
+
+      {alterandoSenha && (
+        <Modal titulo="Alterar minha senha"
+               descricao="Por segurança, suas outras sessões abertas serão encerradas."
+               onFechar={() => setAlterandoSenha(false)}>
+          <FormularioNovaSenha
+            onCancelar={() => setAlterandoSenha(false)}
+            onConcluido={(u) => {
+              setUsuario(u);
+              setAlterandoSenha(false);
+              setAviso("Senha alterada com sucesso.");
+            }}
+          />
+        </Modal>
+      )}
 
       {novoLead && (
         <NovoLeadModal
