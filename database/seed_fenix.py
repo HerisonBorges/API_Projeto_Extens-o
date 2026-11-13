@@ -28,6 +28,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from config import em_producao  # noqa: E402
 from database.conexao import get_db_connection  # noqa: E402
 
 
@@ -173,7 +174,14 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Seed de homologação da Loja Fênix.")
     parser.add_argument("--resetar", action="store_true",
                         help="Recria os dados de negócio (mantém empresa e usuários extras).")
+    parser.add_argument("--sim", action="store_true",
+                        help="Confirma o --resetar (sem isso, só mostra o que seria apagado).")
     args = parser.parse_args(argv)
+
+    if em_producao():
+        print("Recusado: APP_ENV=producao. O seed cria contas com senha conhecida "
+              "e o --resetar apaga dados. Use só em homologação.")
+        return 2
 
     emails = [u[1] for u in USUARIOS]
 
@@ -197,6 +205,21 @@ def main(argv=None):
                 if estranhas:
                     print(f"Os e-mails do seed já pertencem a outra empresa {sorted(estranhas)}. "
                           "Nada foi alterado.")
+                    return 1
+
+                # --resetar apaga dados reais: mostra o impacto e exige --sim
+                if existentes and not args.sim:
+                    contagens = {}
+                    for tabela in ("clientes", "oportunidades", "tarefas", "interacoes"):
+                        cursor.execute(f"SELECT COUNT(*) FROM {tabela} WHERE empresa_id = %s;",
+                                       (existentes[0],))
+                        contagens[tabela] = cursor.fetchone()[0]
+                    print(f"--resetar vai APAGAR da Loja Fênix (empresa_id {existentes[0]}), "
+                          f"no banco {os.getenv('DB_HOST', 'localhost')}:")
+                    for tabela, total in contagens.items():
+                        print(f"  {total} {tabela}")
+                    print("e restaurar as senhas dos usuários do seed. Nada foi alterado.")
+                    print("Para confirmar: python3 -m database.seed_fenix --resetar --sim")
                     return 1
 
                 empresa_id = garantir_empresa(cursor)

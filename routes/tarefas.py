@@ -1,7 +1,7 @@
 from flask import Blueprint, g, jsonify, request
 
 from database.conexao import conectar_banco
-from seguranca import perfil_requerido, token_obrigatorio
+from seguranca import fuso_empresa, perfil_requerido, token_obrigatorio
 
 
 tarefas_bp = Blueprint("tarefas", __name__, url_prefix="/tarefas")
@@ -98,14 +98,16 @@ def listar_alertas():
     conexao = conectar_banco()
     cursor = conexao.cursor()
 
+    # "Hoje" é o dia no fuso da empresa, não em UTC (o banco roda em UTC: entre
+    # 21h e 24h em São Paulo o CURRENT_DATE já é amanhã)
     cursor.execute(f"""
         SELECT {COLUNAS}
         FROM tarefas
-        WHERE empresa_id = %s
+        WHERE empresa_id = %(empresa_id)s
           AND concluida = FALSE
-          AND data_vencimento < CURRENT_DATE
+          AND data_vencimento < (NOW() AT TIME ZONE %(tz)s)::date
         ORDER BY data_vencimento, id;
-    """, (g.empresa_id,))
+    """, {"empresa_id": g.empresa_id, "tz": fuso_empresa()})
 
     vencidas = [montar_tarefa(t) for t in cursor.fetchall()]
 
@@ -120,13 +122,14 @@ def listar_alertas():
 
     cursor.execute("""
         SELECT id, titulo, cliente_id, valor,
-               (CURRENT_DATE - etapa_atualizada_em::date) AS dias_parado
+               (NOW() AT TIME ZONE %(tz)s)::date
+                 - (etapa_atualizada_em AT TIME ZONE %(tz)s)::date AS dias_parado
         FROM oportunidades
-        WHERE empresa_id = %s
+        WHERE empresa_id = %(empresa_id)s
           AND etapa = 'Proposta'
-          AND etapa_atualizada_em < NOW() - make_interval(days => %s)
+          AND etapa_atualizada_em < NOW() - make_interval(days => %(dias)s)
         ORDER BY etapa_atualizada_em;
-    """, (g.empresa_id, dias))
+    """, {"empresa_id": g.empresa_id, "dias": dias, "tz": fuso_empresa()})
 
     orcamentos_parados = [
         {

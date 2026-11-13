@@ -20,8 +20,15 @@ def _chave():
         raise RuntimeError("SECRET_KEY não definida.")
     return chave
 
-# Fuso usado para a janela de acesso. O servidor do banco roda em UTC.
+# Fuso da empresa (janela de acesso, "hoje" dos follow-ups, meses dos relatórios).
+# O servidor do banco roda em UTC.
 TZ_EMPRESA = os.environ.get("TZ_EMPRESA", "America/Sao_Paulo")
+
+
+def fuso_empresa():
+    """Fuso usado nas contas de data. Lido a cada chamada: é o ponto único a
+    mudar quando houver fuso por empresa."""
+    return TZ_EMPRESA
 
 # Expressão SQL: o usuário está dentro da janela de acesso agora?
 # - NULL = irrestrito

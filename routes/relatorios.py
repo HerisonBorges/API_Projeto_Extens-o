@@ -3,7 +3,7 @@ from flask import Blueprint, g, jsonify, request
 from database.conexao import get_db_connection
 from routes.interacoes import TIPOS_VALIDOS as CANAIS
 from routes.oportunidades import ETAPA_FINAL, ETAPAS_VALIDAS
-from seguranca import TZ_EMPRESA, perfil_requerido, token_obrigatorio
+from seguranca import fuso_empresa, perfil_requerido, token_obrigatorio
 
 
 relatorios_bp = Blueprint(
@@ -36,7 +36,7 @@ def relatorio_vendas():
 
     p = {
         "empresa_id": g.empresa_id,
-        "tz": TZ_EMPRESA,
+        "tz": fuso_empresa(),
         "unidade": PERIODOS[periodo],
         "final": ETAPA_FINAL,
     }

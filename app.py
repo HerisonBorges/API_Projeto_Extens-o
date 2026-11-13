@@ -35,6 +35,10 @@ PRODUCAO = em_producao()
 app = Flask(__name__)
 app.json.ensure_ascii = False  # "Ligação" e não "Liga\u00e7\u00e3o"
 
+# Nenhuma rota precisa de corpos grandes (o maior campo tem 2000 caracteres).
+# Acima disso o Flask responde 413, tratado em erro_http abaixo.
+app.config["MAX_CONTENT_LENGTH"] = int(os.getenv("MAX_CONTENT_LENGTH", 1024 * 1024))
+
 if PRODUCAO:
     # Atrás do proxy do PaaS: IP e esquema (https) reais vêm dos cabeçalhos X-Forwarded-*
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
