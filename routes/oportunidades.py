@@ -66,6 +66,34 @@ def montar_oportunidade(o):
     }
 
 
+TITULO_MAXIMO = 150
+VALOR_MAXIMO = 9_999_999_999.99  # limite de NUMERIC(12,2)
+
+
+def validar_titulo_valor(titulo, valor, cliente_id):
+    """Valida os campos de criação/edição. Retorna (titulo, valor, erro).
+
+    Antes, valor texto, negativo ou grande demais e título longo chegavam ao
+    banco e viravam erro 500.
+    """
+    if not isinstance(titulo, str) or not titulo.strip():
+        return None, None, "titulo é obrigatório."
+    if len(titulo.strip()) > TITULO_MAXIMO:
+        return None, None, f"titulo aceita até {TITULO_MAXIMO} caracteres."
+
+    if valor is None:
+        valor = 0
+    if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+        return None, None, "valor deve ser um número."
+    if not 0 <= valor <= VALOR_MAXIMO:
+        return None, None, "valor deve estar entre 0 e 9.999.999.999,99."
+
+    if cliente_id is not None and (isinstance(cliente_id, bool) or not isinstance(cliente_id, int)):
+        return None, None, "cliente_id deve ser um número."
+
+    return titulo.strip(), round(float(valor), 2), None
+
+
 def cliente_pertence_a_empresa(cursor, cliente_id, empresa_id):
     if cliente_id is None:
         return True
@@ -143,10 +171,9 @@ def criar_oportunidade():
     valor = dados.get("valor", 0)
     etapa = dados.get("etapa", ETAPAS_VALIDAS[0])
 
-    if not titulo:
-        return jsonify({
-            "erro": "titulo é obrigatório."
-        }), 400
+    titulo, valor, problema = validar_titulo_valor(titulo, valor, cliente_id)
+    if problema:
+        return jsonify({"erro": problema}), 400
 
     if etapa not in ETAPAS_VALIDAS:
         return jsonify({
@@ -193,10 +220,12 @@ def editar_oportunidade(id):
     valor = dados.get("valor", 0)
     etapa = dados.get("etapa")
 
-    if not titulo or not etapa:
-        return jsonify({
-            "erro": "titulo e etapa são obrigatórios."
-        }), 400
+    if not etapa:
+        return jsonify({"erro": "titulo e etapa são obrigatórios."}), 400
+
+    titulo, valor, problema = validar_titulo_valor(titulo, valor, cliente_id)
+    if problema:
+        return jsonify({"erro": problema}), 400
 
     if etapa not in ETAPAS_VALIDAS:
         return jsonify({

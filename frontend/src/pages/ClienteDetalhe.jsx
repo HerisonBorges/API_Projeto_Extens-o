@@ -15,6 +15,7 @@ import {
 } from "../components/ui/formatos.js";
 import EditarClienteModal from "../components/clientes/EditarClienteModal.jsx";
 import NovoFollowupModal from "../components/followups/NovoFollowupModal.jsx";
+import NovaOportunidadeModal from "../components/oportunidades/NovaOportunidadeModal.jsx";
 import {
   buscarCliente,
   criarInteracao,
@@ -121,6 +122,7 @@ export default function ClienteDetalhe({ id, versao }) {
   const [aviso, setAviso] = useState(null);
   // null = fechado; objeto = aberto com sugestão (pode ser vazio)
   const [agendando, setAgendando] = useState(null);
+  const [novaOportunidade, setNovaOportunidade] = useState(false);
   const [ultimaInteracao, setUltimaInteracao] = useState(null);
 
   const carregar = useCallback(async () => {
@@ -226,7 +228,15 @@ export default function ClienteDetalhe({ id, versao }) {
             </div>
           </Card>
 
-          <Card titulo="Oportunidades associadas">
+          <Card
+            titulo="Oportunidades associadas"
+            acao={
+              <Botao tamanho="sm" variante="contorno" onClick={() => setNovaOportunidade(true)}
+                     aria-label={`Nova oportunidade para ${cliente.nome}`}>
+                + Nova oportunidade
+              </Botao>
+            }
+          >
             {oportunidades.length === 0 ? (
               <Vazio>Nenhuma oportunidade para este cliente.</Vazio>
             ) : (
@@ -311,6 +321,18 @@ export default function ClienteDetalhe({ id, versao }) {
           </Card>
         </div>
       </div>
+
+      {novaOportunidade && (
+        <NovaOportunidadeModal
+          cliente={cliente}
+          onFechar={() => setNovaOportunidade(false)}
+          onCriada={({ titulo, etapa }) => {
+            setNovaOportunidade(false);
+            setAviso(`Oportunidade "${titulo}" criada em ${etapa}.`);
+            carregar();
+          }}
+        />
+      )}
 
       {agendando && (
         <NovoFollowupModal

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import NovaOportunidadeModal from "../components/oportunidades/NovaOportunidadeModal.jsx";
 import ReciclagemModal from "../components/reciclagem/ReciclagemModal.jsx";
 import Botao from "../components/ui/Botao.jsx";
 import { Carregando, Erro } from "../components/ui/Estado.jsx";
@@ -103,6 +104,7 @@ export default function Funil({ versao }) {
   const [reciclando, setReciclando] = useState(null);
   const [anuncio, setAnuncio] = useState("");
   const [falha, setFalha] = useState(null);
+  const [criando, setCriando] = useState(false);
 
   const carregar = useCallback(async () => {
     setErro(null);
@@ -155,10 +157,27 @@ export default function Funil({ versao }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-sandro-label">
-        Arraste os cards entre as colunas ou use os botões ← e →. Vendas em Fechado podem ser recicladas.
-      </p>
-      <p role="status" aria-live="polite" className="sr-only">{anuncio}</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-sandro-label">
+          Arraste os cards entre as colunas ou use os botões ← e →. Vendas em Fechado podem ser recicladas.
+        </p>
+        <Botao variante="primario" onClick={() => setCriando(true)}>
+          <span aria-hidden="true">+</span> Nova oportunidade
+        </Botao>
+      </div>
+      {/* Visível (não só para leitor de tela): confirma a criação e as movimentações */}
+      <p role="status" aria-live="polite" className="min-h-5 text-sm text-teal-400">{anuncio}</p>
+
+      {criando && (
+        <NovaOportunidadeModal
+          onFechar={() => setCriando(false)}
+          onCriada={({ titulo, etapa }) => {
+            setCriando(false);
+            setAnuncio(`Oportunidade "${titulo}" criada em ${etapa}.`);
+            carregar();
+          }}
+        />
+      )}
       <Erro mensagem={falha} />
 
       <div className="flex gap-4 overflow-x-auto pb-4">

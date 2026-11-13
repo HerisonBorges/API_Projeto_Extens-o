@@ -92,5 +92,46 @@ class CriarFollowup(unittest.TestCase):
         self.assertEqual(r.status_code, 404)
 
 
+class NovaOportunidadeParaClienteExistente(unittest.TestCase):
+    """Item 2: nova oportunidade para um cliente que já existe."""
+
+    def test_01_cria_segunda_oportunidade_para_o_mesmo_cliente(self):
+        ids = []
+        for titulo, valor in (("Primeira compra", 100), ("Recompra", 250.5)):
+            r = c.post("/oportunidades", headers=ctx["h_a"], json={
+                "cliente_id": ctx["cliente"], "titulo": titulo, "valor": valor, "etapa": "Qualificação"})
+            self.assertEqual(r.status_code, 201, r.get_json())
+            ids.append(r.get_json()["oportunidade_id"])
+
+        do_cliente = {o["id"]: o for o in c.get("/oportunidades", headers=ctx["h_a"]).get_json()
+                      if o["cliente_id"] == ctx["cliente"]}
+        self.assertTrue(set(ids) <= set(do_cliente))
+        self.assertEqual(do_cliente[ids[1]]["valor"], 250.5)
+        self.assertEqual(do_cliente[ids[1]]["etapa"], "Qualificação")
+
+    def test_02_entradas_invalidas_dao_400_e_nao_500(self):
+        """Antes, todas estas entradas viravam erro 500."""
+        invalidos = [
+            {"titulo": "x", "valor": "abc"},
+            {"titulo": "x", "valor": -10},
+            {"titulo": "x", "valor": 1e13},
+            {"titulo": "x", "valor": True},
+            {"titulo": "x" * 151},
+            {"titulo": "  "},
+            {"titulo": "x", "cliente_id": "12"},
+        ]
+        for corpo in invalidos:
+            with self.subTest(corpo=str(corpo)[:50]):
+                self.assertEqual(c.post("/oportunidades", headers=ctx["h_a"], json=corpo).status_code, 400)
+
+        op = c.post("/oportunidades", headers=ctx["h_a"], json={"titulo": "Editar"}).get_json()["oportunidade_id"]
+        r = c.put(f"/oportunidades/{op}", headers=ctx["h_a"], json={"titulo": "Editar", "etapa": "Proposta", "valor": -1})
+        self.assertEqual(r.status_code, 400)
+
+    def test_03_cliente_de_outra_empresa_recebe_404(self):
+        r = c.post("/oportunidades", headers=ctx["h_b"], json={"titulo": "Invasão", "cliente_id": ctx["cliente"]})
+        self.assertEqual(r.status_code, 404)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
