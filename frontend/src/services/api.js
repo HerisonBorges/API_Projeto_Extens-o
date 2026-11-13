@@ -154,6 +154,7 @@ export const criarInteracao = (dados) =>
 // ---- Tarefas / Follow-ups -------------------------------------------------
 export const listarTarefas = ({ concluida } = {}) =>
   requisicao(comQuery("/tarefas", { concluida }));
+export const criarTarefa = (dados) => requisicao("/tarefas", { method: "POST", body: dados });
 export const concluirTarefa = (id) => requisicao(`/tarefas/${id}/concluir`, { method: "PATCH" });
 export const atualizarTarefa = (id, dados) =>
   requisicao(`/tarefas/${id}`, { method: "PUT", body: dados });

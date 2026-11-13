@@ -46,6 +46,13 @@ function isoLocal(data) {
 
 export const hojeISO = () => isoLocal(new Date());
 
+// "AAAA-MM-DD" daqui a N dias, no calendário local
+export function daquiDiasISO(dias) {
+  const data = new Date();
+  data.setDate(data.getDate() + dias);
+  return isoLocal(data);
+}
+
 export function amanhaISO() {
   const data = new Date();
   data.setDate(data.getDate() + 1);

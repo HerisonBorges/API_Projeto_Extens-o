@@ -8,11 +8,20 @@ import StatusBadge from "../components/ui/StatusBadge.jsx";
 import {
   ETAPA_FINAL,
   TIPOS_INTERACAO,
+  diasAte,
+  formatarData,
   formatarDataHora,
   formatarMoeda,
 } from "../components/ui/formatos.js";
 import EditarClienteModal from "../components/clientes/EditarClienteModal.jsx";
-import { buscarCliente, criarInteracao, listarInteracoes, listarOportunidades } from "../services/api.js";
+import NovoFollowupModal from "../components/followups/NovoFollowupModal.jsx";
+import {
+  buscarCliente,
+  criarInteracao,
+  listarInteracoes,
+  listarOportunidades,
+  listarTarefas,
+} from "../services/api.js";
 
 const ICONE_TIPO = { "Ligação": "☎", WhatsApp: "✆", "E-mail": "✉", "Reunião": "◎" };
 const TOM_STATUS = { Lead: "azul", Cliente: "permitido", Inativo: "neutro" };
@@ -110,6 +119,9 @@ export default function ClienteDetalhe({ id, versao }) {
   const [erro, setErro] = useState(null);
   const [editando, setEditando] = useState(false);
   const [aviso, setAviso] = useState(null);
+  // null = fechado; objeto = aberto com sugestão (pode ser vazio)
+  const [agendando, setAgendando] = useState(null);
+  const [ultimaInteracao, setUltimaInteracao] = useState(null);
 
   const carregar = useCallback(async () => {
     setErro(null);
@@ -120,10 +132,14 @@ export default function ClienteDetalhe({ id, versao }) {
         listarOportunidades(),
         listarInteracoes({ clienteId: id, limite: 200 }),
       ]);
+      const tarefas = await listarTarefas({ concluida: false });
       setDados({
         cliente,
         oportunidades: oportunidades.filter((o) => o.cliente_id === id),
         interacoes,
+        followups: tarefas
+          .filter((t) => t.cliente_id === id)
+          .sort((a, b) => (a.data_vencimento ?? "9").localeCompare(b.data_vencimento ?? "9")),
       });
     } catch (e) {
       setErro(e.status === 404 ? "Cliente não encontrado." : e.message);
@@ -178,6 +194,38 @@ export default function ClienteDetalhe({ id, versao }) {
             </p>
           </Card>
 
+          <Card
+            titulo="Próximos follow-ups"
+            acao={
+              <Botao tamanho="sm" variante="contorno" onClick={() => setAgendando({})}
+                     aria-label={`Novo follow-up para ${cliente.nome}`}>
+                + Novo follow-up
+              </Botao>
+            }
+          >
+            {dados.followups.length === 0 ? (
+              <Vazio>Nenhum follow-up agendado para este cliente.</Vazio>
+            ) : (
+              <ul className="divide-y divide-sandro-borda/15">
+                {dados.followups.map((t) => {
+                  const dias = t.data_vencimento ? diasAte(t.data_vencimento) : null;
+                  return (
+                    <li key={t.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                      <span className="min-w-0 truncate text-sm text-white">{t.titulo}</span>
+                      <StatusBadge tom={dias === null ? "neutro" : dias < 0 ? "bloqueado" : dias === 0 ? "pendente" : "azul"}>
+                        {dias === null ? "Sem data" : dias < 0 ? `Atrasado · ${formatarData(t.data_vencimento)}`
+                          : dias === 0 ? "Hoje" : formatarData(t.data_vencimento)}
+                      </StatusBadge>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <div className="border-t border-sandro-borda/20 px-5 py-3">
+              <a href="#/followups" className="text-xs text-sandro-acento hover:underline">Ver todos os follow-ups →</a>
+            </div>
+          </Card>
+
           <Card titulo="Oportunidades associadas">
             {oportunidades.length === 0 ? (
               <Vazio>Nenhuma oportunidade para este cliente.</Vazio>
@@ -208,8 +256,30 @@ export default function ClienteDetalhe({ id, versao }) {
             <NovaInteracao
               clienteId={cliente.id}
               oportunidades={oportunidades}
-              onSalva={(nova) => setDados((d) => ({ ...d, interacoes: [nova, ...d.interacoes] }))}
+              onSalva={(nova) => {
+                setDados((d) => ({ ...d, interacoes: [nova, ...d.interacoes] }));
+                setUltimaInteracao(nova);
+              }}
             />
+            {ultimaInteracao && (
+              <div role="status"
+                   className="flex flex-wrap items-center justify-between gap-3 border-t border-sandro-borda/20 px-5 py-3">
+                <p className="text-sm text-teal-400">Interação salva. Quer agendar o próximo contato?</p>
+                <div className="flex gap-2">
+                  <Botao tamanho="sm" variante="fantasma" onClick={() => setUltimaInteracao(null)}>Agora não</Botao>
+                  <Botao tamanho="sm" variante="primario"
+                         onClick={() => {
+                           setAgendando({
+                             titulo: `Retornar contato (${ultimaInteracao.tipo})`,
+                             oportunidadeId: ultimaInteracao.oportunidade_id,
+                           });
+                           setUltimaInteracao(null);
+                         }}>
+                    Agendar próximo contato
+                  </Botao>
+                </div>
+              </div>
+            )}
           </Card>
 
           <Card titulo="Histórico de interações">
@@ -241,6 +311,19 @@ export default function ClienteDetalhe({ id, versao }) {
           </Card>
         </div>
       </div>
+
+      {agendando && (
+        <NovoFollowupModal
+          cliente={cliente}
+          sugestao={agendando}
+          onFechar={() => setAgendando(null)}
+          onCriado={({ titulo, data }) => {
+            setAgendando(null);
+            setAviso(`"${titulo}" agendado para ${formatarData(data)}.`);
+            carregar();
+          }}
+        />
+      )}
 
       {editando && (
         <EditarClienteModal

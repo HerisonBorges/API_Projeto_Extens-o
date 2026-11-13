@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import NovoFollowupModal from "../components/followups/NovoFollowupModal.jsx";
 import Abas from "../components/ui/Abas.jsx";
 import Botao from "../components/ui/Botao.jsx";
 import Card from "../components/ui/Card.jsx";
@@ -103,6 +104,7 @@ export default function Followups({ versao }) {
   const [erro, setErro] = useState(null);
   const [filtro, setFiltro] = useState("pendentes");
   const [aviso, setAviso] = useState(null);
+  const [criando, setCriando] = useState(false);
 
   const carregar = useCallback(async () => {
     setErro(null);
@@ -168,6 +170,26 @@ export default function Followups({ versao }) {
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-sandro-label">
+          {plural(contar("atrasados"), "follow-up atrasado", "follow-ups atrasados")} · {plural(contar("hoje"), "para hoje", "para hoje")}
+        </p>
+        <Botao variante="primario" onClick={() => setCriando(true)}>
+          <span aria-hidden="true">+</span> Novo follow-up
+        </Botao>
+      </div>
+
+      {criando && (
+        <NovoFollowupModal
+          onFechar={() => setCriando(false)}
+          onCriado={({ titulo, data }) => {
+            setCriando(false);
+            setAviso(`"${titulo}" agendado para ${formatarData(data)}.`);
+            carregar();
+          }}
+        />
+      )}
+
       {/* RF04: orçamentos parados há mais de X dias (configurável por empresa) */}
       <Card
         titulo="Orçamentos parados"

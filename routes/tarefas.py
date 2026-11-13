@@ -1,3 +1,5 @@
+from datetime import date
+
 from flask import Blueprint, g, jsonify, request
 
 from database.conexao import conectar_banco
@@ -23,6 +25,59 @@ def montar_tarefa(t):
         "concluida": t[6],
         "oportunidade_id": t[7]
     }
+
+
+TITULO_MAXIMO = 150
+DESCRICAO_MAXIMA = 2000
+
+
+def _id_opcional(valor):
+    if valor is None:
+        return None
+    if isinstance(valor, bool) or not isinstance(valor, int):
+        raise ValueError
+    return valor
+
+
+def validar_campos_tarefa(dados):
+    """Valida o corpo de criação/edição. Retorna (campos, erro).
+
+    Antes, data ou título inválidos chegavam ao banco e viravam erro 500.
+    """
+    titulo = dados.get("titulo")
+    if not isinstance(titulo, str) or not titulo.strip():
+        return None, "titulo é obrigatório."
+    if len(titulo.strip()) > TITULO_MAXIMO:
+        return None, f"titulo aceita até {TITULO_MAXIMO} caracteres."
+
+    descricao = dados.get("descricao")
+    if descricao is not None:
+        if not isinstance(descricao, str):
+            return None, "descricao inválida."
+        descricao = descricao.strip() or None
+        if descricao and len(descricao) > DESCRICAO_MAXIMA:
+            return None, f"descricao aceita até {DESCRICAO_MAXIMA} caracteres."
+
+    data_vencimento = dados.get("data_vencimento")
+    if data_vencimento is not None:
+        try:
+            data_vencimento = date.fromisoformat(data_vencimento).isoformat()
+        except (TypeError, ValueError):
+            return None, "data_vencimento inválida. Use AAAA-MM-DD."
+
+    try:
+        cliente_id = _id_opcional(dados.get("cliente_id"))
+        oportunidade_id = _id_opcional(dados.get("oportunidade_id"))
+    except ValueError:
+        return None, "cliente_id e oportunidade_id devem ser números."
+
+    return {
+        "titulo": titulo.strip(),
+        "descricao": descricao,
+        "data_vencimento": data_vencimento,
+        "cliente_id": cliente_id,
+        "oportunidade_id": oportunidade_id,
+    }, None
 
 
 def oportunidade_pertence_a_empresa(cursor, oportunidade_id, empresa_id):
@@ -157,16 +212,15 @@ def listar_alertas():
 def criar_tarefa():
     dados = request.get_json(silent=True) or {}
 
-    cliente_id = dados.get("cliente_id")
-    titulo = dados.get("titulo")
-    descricao = dados.get("descricao")
-    data_vencimento = dados.get("data_vencimento")
-    oportunidade_id = dados.get("oportunidade_id")
+    campos, problema = validar_campos_tarefa(dados)
+    if problema:
+        return jsonify({"erro": problema}), 400
 
-    if not titulo:
-        return jsonify({
-            "erro": "titulo é obrigatório."
-        }), 400
+    cliente_id = campos["cliente_id"]
+    titulo = campos["titulo"]
+    descricao = campos["descricao"]
+    data_vencimento = campos["data_vencimento"]
+    oportunidade_id = campos["oportunidade_id"]
 
     conexao = conectar_banco()
     cursor = conexao.cursor()
@@ -211,16 +265,15 @@ def criar_tarefa():
 def editar_tarefa(id):
     dados = request.get_json(silent=True) or {}
 
-    cliente_id = dados.get("cliente_id")
-    titulo = dados.get("titulo")
-    descricao = dados.get("descricao")
-    data_vencimento = dados.get("data_vencimento")
-    oportunidade_id = dados.get("oportunidade_id")
+    campos, problema = validar_campos_tarefa(dados)
+    if problema:
+        return jsonify({"erro": problema}), 400
 
-    if not titulo:
-        return jsonify({
-            "erro": "titulo é obrigatório."
-        }), 400
+    cliente_id = campos["cliente_id"]
+    titulo = campos["titulo"]
+    descricao = campos["descricao"]
+    data_vencimento = campos["data_vencimento"]
+    oportunidade_id = campos["oportunidade_id"]
 
     conexao = conectar_banco()
     cursor = conexao.cursor()
