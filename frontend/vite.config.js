@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -28,6 +30,9 @@ function validarApiUrl(valor) {
 // Porta 5173 já está liberada no CORS do Flask em desenvolvimento.
 // O dev server do Vite 8 recusa caminhos com ":" (ex.: "6 Semestre 2026:2"):
 // nessa pasta use "npm run homologacao" (build em modo homologacao + preview).
+// Versão mostrada no rodapé do Dashboard, lida do package.json no build
+const VERSAO = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf-8")).version;
+
 export default defineConfig(({ command, mode }) => {
   // loadEnv lê .env.[mode] e também process.env (variáveis do painel do Netlify)
   const env = loadEnv(mode, process.cwd(), "VITE_");
@@ -38,6 +43,7 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     plugins: [react(), tailwindcss()],
+    define: { __APP_VERSION__: JSON.stringify(VERSAO) },
     server: { port: 5173 },
     preview: { port: 5173, strictPort: true },
     build: {

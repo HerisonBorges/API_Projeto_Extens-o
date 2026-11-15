@@ -49,7 +49,7 @@ export function encerrarSessao(motivo = null) {
  * - 403 HORARIO_BLOQUEADO -> expulsa para o login na hora, com a mensagem da API
  * - 401 com sessão aberta -> token expirado ou usuário removido
  */
-async function requisicao(caminho, { method = "GET", body } = {}) {
+async function requisicao(caminho, { method = "GET", body, arquivo = false } = {}) {
   const token = sessionStorage.getItem(CHAVE_TOKEN);
 
   let resposta;
@@ -64,6 +64,13 @@ async function requisicao(caminho, { method = "GET", body } = {}) {
     });
   } catch {
     throw new ApiError(0, "Não foi possível falar com o servidor. Verifique sua conexão.");
+  }
+
+  // Download (ex.: PDF): no sucesso devolve o arquivo; erros seguem o fluxo JSON abaixo
+  if (arquivo && resposta.ok) {
+    const disposicao = resposta.headers.get("Content-Disposition") ?? "";
+    const nome = /filename="([^"]+)"/.exec(disposicao)?.[1] ?? "sandro-crm.pdf";
+    return { blob: await resposta.blob(), nome };
   }
 
   const corpo = await resposta.json().catch(() => ({}));
@@ -162,6 +169,21 @@ export const buscarAlertas = () => requisicao("/tarefas/alertas");
 
 // ---- Relatórios e painel --------------------------------------------------
 export const buscarRelatorio = (periodo) => requisicao(comQuery("/relatorios/vendas", { periodo }));
+
+/** Baixa o PDF de faturamento do período e dispara o download no navegador. */
+export async function baixarPdfFaturamento(periodo) {
+  const { blob, nome } = await requisicao(comQuery("/relatorios/vendas/pdf", { periodo }), { arquivo: true });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = nome;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  // Libera a memória depois que o navegador iniciar o download
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  return nome;
+}
 
 // ---- Configurações --------------------------------------------------------
 export const buscarConfiguracoes = () => requisicao("/configuracoes");

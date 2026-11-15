@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import GraficoBarras from "../components/graficos/GraficoBarras.jsx";
 import Abas from "../components/ui/Abas.jsx";
+import Botao from "../components/ui/Botao.jsx";
 import Card from "../components/ui/Card.jsx";
 import { Carregando, Erro, Vazio } from "../components/ui/Estado.jsx";
 import Kpi from "../components/ui/Kpi.jsx";
@@ -12,7 +13,7 @@ import {
   formatarMoedaCurta,
   formatarPercentual,
 } from "../components/ui/formatos.js";
-import { buscarRelatorio } from "../services/api.js";
+import { baixarPdfFaturamento, buscarRelatorio } from "../services/api.js";
 
 const PERIODOS = [
   { valor: "mes", rotulo: "Mês" },
@@ -26,6 +27,8 @@ export default function Relatorios({ versao }) {
   const [periodo, setPeriodo] = useState("mes");
   const [dados, setDados] = useState(null);
   const [erro, setErro] = useState(null);
+  const [exportando, setExportando] = useState(false);
+  const [avisoPdf, setAvisoPdf] = useState(null);
 
   const carregar = useCallback(async () => {
     setErro(null);
@@ -42,14 +45,37 @@ export default function Relatorios({ versao }) {
 
   const acumulado = dados?.serie_mensal.reduce((s, m) => s + m.receita, 0) ?? 0;
 
+  async function exportar() {
+    setExportando(true);
+    setAvisoPdf(null);
+    try {
+      const nome = await baixarPdfFaturamento(periodo);
+      setAvisoPdf({ ok: true, texto: `PDF gerado: ${nome}` });
+    } catch (e) {
+      setAvisoPdf({ ok: false, texto: `Não foi possível gerar o PDF: ${e.message}` });
+    } finally {
+      setExportando(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Abas rotulo="Período do relatório" valor={periodo} onChange={setPeriodo} opcoes={PERIODOS} />
-        {dados?.inicio_periodo && (
-          <p className="text-xs text-sandro-label">Desde {formatarData(dados.inicio_periodo)}</p>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <Abas rotulo="Período do relatório" valor={periodo} onChange={setPeriodo} opcoes={PERIODOS} />
+          {dados?.inicio_periodo && (
+            <p className="text-xs text-sandro-label">Desde {formatarData(dados.inicio_periodo)}</p>
+          )}
+        </div>
+        <Botao variante="contorno" onClick={exportar} carregando={exportando} textoCarregando="Gerando PDF..."
+               disabled={!dados} aria-label={`Exportar faturamento (${NOME_PERIODO[periodo]}) em PDF`}>
+          <span aria-hidden="true">⤓</span> Exportar PDF
+        </Botao>
       </div>
+      <p role="status" aria-live="polite"
+         className={`min-h-5 text-sm ${avisoPdf?.ok === false ? "text-rose-300" : "text-teal-400"}`}>
+        {avisoPdf?.texto}
+      </p>
 
       {erro && <Erro mensagem={erro} onTentarDeNovo={carregar} />}
       {!erro && !dados && <Carregando texto="Calculando indicadores..." />}
