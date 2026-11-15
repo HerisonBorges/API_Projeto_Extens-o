@@ -100,8 +100,45 @@ export default function Clientes({ usuario, versao }) {
           <Vazio>{busca ? `Nenhum cliente encontrado para "${busca}".` : "Nenhum cliente neste filtro."}</Vazio>
         )}
 
+        {/* Celular (< sm): lista de cartões, sem rolagem lateral; o cartão inteiro abre o cliente */}
         {visiveis.length > 0 && (
-          <div className="overflow-x-auto">
+          <ul aria-label="Clientes da empresa" className="divide-y divide-sandro-borda/15 sm:hidden">
+            {visiveis.map((c) => (
+              <li key={c.id} className="flex items-stretch">
+                <button
+                  type="button"
+                  onClick={() => navegar("clientes", c.id)}
+                  aria-label={`Abrir ${c.nome}`}
+                  className="min-w-0 flex-1 px-4 py-3 text-left active:bg-sandro-suporte/20
+                             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset
+                             focus-visible:ring-sandro-acento"
+                >
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="truncate font-medium text-white">{c.nome}</span>
+                    <StatusBadge tom={TOM_STATUS[c.status] ?? "neutro"}>{c.status ?? "—"}</StatusBadge>
+                  </span>
+                  <span className="mt-0.5 block truncate text-sm text-slate-300">{c.email ?? "—"}</span>
+                  {c.telefone && <span className="block text-xs text-sandro-label">{c.telefone}</span>}
+                </button>
+                {ehGestor && (
+                  <button
+                    type="button"
+                    onClick={() => setExcluindo(c)}
+                    aria-label={`Excluir ${c.nome}`}
+                    className="w-20 shrink-0 border-l border-sandro-borda/15 text-xs font-medium text-rose-300
+                               active:bg-rose-950/60 focus-visible:outline-none focus-visible:ring-2
+                               focus-visible:ring-inset focus-visible:ring-sandro-acento"
+                  >
+                    Excluir
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {visiveis.length > 0 && (
+          <div className="rolagem-x hidden sm:block">
             <table className="w-full text-left text-sm">
               <caption className="sr-only">Clientes da empresa</caption>
               <thead className="border-b border-sandro-borda/20 text-xs uppercase tracking-wider text-sandro-label">

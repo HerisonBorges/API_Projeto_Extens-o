@@ -115,8 +115,6 @@ export default function App() {
             titulo={detalheCliente ? "Cliente" : ROTAS[permitido ? rota.pagina : "dashboard"].titulo}
             usuario={usuario}
             onNovoLead={() => setNovoLead(true)}
-            onSair={() => encerrarSessao(null)}
-            onAlterarSenha={() => setAlterandoSenha(true)}
           />
           <Aviso mensagem={aviso} />
 

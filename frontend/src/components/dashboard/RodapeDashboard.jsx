@@ -64,10 +64,10 @@ export default function RodapeDashboard({ usuario, atualizadoEm, onAtualizar, at
       </div>
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-sandro-borda/20 pt-4">
-        <nav aria-label="Atalhos do rodapé" className="flex flex-wrap gap-x-4 gap-y-1">
+        <nav aria-label="Atalhos do rodapé" className="-ml-1 flex flex-wrap gap-x-2 gap-y-1">
           {atalhos.map((a) => (
             <a key={a.href} href={a.href}
-               className="hover:text-white hover:underline focus-visible:outline-none focus-visible:ring-2
+               className="alvo-toque px-1.5 hover:text-white hover:underline focus-visible:outline-none focus-visible:ring-2
                           focus-visible:ring-sandro-acento">
               {a.rotulo}
             </a>

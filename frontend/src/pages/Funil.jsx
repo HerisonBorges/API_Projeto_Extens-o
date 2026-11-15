@@ -38,10 +38,10 @@ function CardOportunidade({ op, cliente, onMover, onReciclar, onCancelar, movend
       <p className="mt-1 text-sm font-bold text-sandro-acento">{formatarMoeda(op.valor)}</p>
 
       <dl className="mt-2 space-y-0.5 text-xs">
-        <div className="flex gap-1">
+        <div className="flex items-center gap-1">
           <dt className="text-sandro-label">Cliente:</dt>
           <dd className="truncate text-slate-200">
-            {cliente ? <a href={`#/clientes/${cliente.id}`} className="hover:underline">{cliente.nome}</a> : "—"}
+            {cliente ? <a href={`#/clientes/${cliente.id}`} className="alvo-toque hover:underline">{cliente.nome}</a> : "—"}
           </dd>
         </div>
         <div className="flex gap-1">
@@ -180,7 +180,8 @@ export default function Funil({ versao }) {
       )}
       <Erro mensagem={falha} />
 
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      {/* Celular: uma coluna por vez (85vw) com encaixe ao deslizar; desktop: colunas de 18rem */}
+      <div className="rolagem-x -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 px-4 pb-4 md:mx-0 md:snap-none md:gap-4 md:px-0">
         {ETAPAS.map((etapa) => {
           const daEtapa = ops.filter((o) => o.etapa === etapa);
           const total = daEtapa.reduce((s, o) => s + o.valor, 0);
@@ -203,7 +204,8 @@ export default function Funil({ versao }) {
                 const op = ops.find((o) => o.id === Number(e.dataTransfer.getData("text/plain")));
                 if (op) mover(op, etapa);
               }}
-              className={`flex w-72 shrink-0 flex-col rounded-xl border bg-sandro-painel/60 transition
+              className={`flex w-[85vw] max-w-72 shrink-0 snap-start flex-col rounded-xl border bg-sandro-painel/60 transition
+                          md:w-72
                           ${alvo ? "border-sandro-acento" : "border-sandro-borda/25"}`}
             >
               <header className="border-b border-sandro-borda/20 px-4 py-3">

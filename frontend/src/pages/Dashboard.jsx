@@ -91,7 +91,7 @@ export default function Dashboard({ usuario, versao }) {
 
   return (
     <div className="space-y-6">
-      <section aria-label="Indicadores" className="grid gap-4 sm:grid-cols-3">
+      <section aria-label="Indicadores" className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Kpi rotulo="Leads ativos" valor={abertas.length} href="#/funil" acao="Ver no funil"
              detalhe={plural(abertas.length, "oportunidade em aberto", "oportunidades em aberto")} />
         <Kpi rotulo="Negócios fechados" valor={fechadas.length} href={destinoVendas}
@@ -101,7 +101,7 @@ export default function Dashboard({ usuario, versao }) {
              acao="Ver oportunidades" detalhe="Soma das oportunidades em aberto" />
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card titulo="Pipeline por etapa">
           <div className="p-5">
             {pipeline > 0
@@ -128,11 +128,31 @@ export default function Dashboard({ usuario, versao }) {
       </div>
 
       <Card titulo="Últimas interações"
-            acao={<a href="#/clientes" className="text-xs text-sandro-acento hover:underline">Ver clientes</a>}>
+            acao={<a href="#/clientes" className="alvo-toque text-xs text-sandro-acento hover:underline">Ver clientes</a>}>
         {dados.interacoes.length === 0 ? (
           <Vazio>Nenhuma interação registrada ainda.</Vazio>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Celular (< sm): cartões empilhados; o resumo quebra em até 2 linhas em vez de cortar */}
+          <ul aria-label="As interações mais recentes com clientes" className="divide-y divide-sandro-borda/15 sm:hidden">
+            {dados.interacoes.map((i) => (
+              <li key={i.id}>
+                <a href={`#/clientes/${i.cliente_id}`}
+                   className="block px-4 py-3 active:bg-sandro-suporte/20 focus-visible:outline-none
+                              focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sandro-acento">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="truncate font-medium text-white">{i.cliente_nome}</span>
+                    <StatusBadge tom="azul">{i.tipo}</StatusBadge>
+                  </span>
+                  <span className="mt-1 line-clamp-2 text-sm text-slate-300">{i.descricao}</span>
+                  <span className="mt-1 block text-xs text-sandro-label">
+                    {formatarDataHora(i.criado_em)}{i.usuario_nome && ` · por ${i.usuario_nome}`}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <div className="rolagem-x hidden sm:block">
             <table className="w-full text-left text-sm">
               <caption className="sr-only">As interações mais recentes com clientes</caption>
               <thead className="border-b border-sandro-borda/20 text-xs uppercase tracking-wider text-sandro-label">
@@ -148,7 +168,7 @@ export default function Dashboard({ usuario, versao }) {
                   <tr key={i.id} className="text-slate-200">
                     <td className="px-5 py-3">
                       <a href={`#/clientes/${i.cliente_id}`}
-                         className="font-medium text-white hover:text-sandro-acento hover:underline">
+                         className="alvo-toque font-medium text-white hover:text-sandro-acento hover:underline">
                         {i.cliente_nome}
                       </a>
                     </td>
@@ -163,6 +183,7 @@ export default function Dashboard({ usuario, versao }) {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
 

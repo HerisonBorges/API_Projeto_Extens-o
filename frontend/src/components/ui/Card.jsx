@@ -2,8 +2,10 @@
 export default function Card({ as: Tag = "section", titulo, acao, className = "", children, ...props }) {
   return (
     <Tag
-      className={`rounded-xl border border-sandro-borda/25 bg-sandro-painel/70 shadow-sm
-                  shadow-black/30 backdrop-blur-sm ${className}`}
+      // Celular: fundo quase opaco, sem backdrop-blur (o desfoque é refeito a cada
+      // quadro de rolagem e derruba o fps em aparelhos simples). Tablet+: vidro.
+      className={`rounded-xl border border-sandro-borda/25 bg-sandro-painel/90 shadow-sm shadow-black/30
+                  md:bg-sandro-painel/70 md:backdrop-blur-sm ${className}`}
       {...props}
     >
       {(titulo || acao) && (

@@ -104,7 +104,7 @@ export default function AcessoUsuarios() {
       {!erro && !usuarios && <Carregando texto="Carregando usuários..." />}
 
       {usuarios && (
-        <div className="overflow-x-auto">
+        <div className="rolagem-x">
           <table className="mt-3 w-full text-left text-sm">
             <caption className="sr-only">Usuários da empresa e suas jornadas de acesso</caption>
             <thead className="border-y border-sandro-borda/25 text-xs uppercase tracking-wider text-sandro-label">

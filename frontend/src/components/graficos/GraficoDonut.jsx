@@ -99,7 +99,10 @@ export default function GraficoDonut({ titulo, fatias, centro, formatar = String
         })}
       </ul>
 
-      <table id={idTabela} className="sr-only">
+      {/* sr-only no <div>, não na <table>: tabela ignora width/overflow e a legenda
+          longa alargava a página inteira no celular */}
+      <div className="sr-only">
+      <table id={idTabela}>
         <caption>{titulo}</caption>
         <tbody>
           {arcos.map((a) => (
@@ -111,6 +114,7 @@ export default function GraficoDonut({ titulo, fatias, centro, formatar = String
           ))}
         </tbody>
       </table>
+      </div>
     </figure>
   );
 }

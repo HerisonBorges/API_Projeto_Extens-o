@@ -256,7 +256,7 @@ export default function GestaoUsuarios({ usuarioLogado }) {
         {!erro && !usuarios && <Carregando texto="Carregando usuários..." />}
 
         {usuarios && (
-          <div className="overflow-x-auto">
+          <div className="rolagem-x">
             <table className="w-full text-left text-sm">
               <caption className="sr-only">Usuários da empresa, perfil e situação da conta</caption>
               <thead className="border-y border-sandro-borda/25 text-xs uppercase tracking-wider text-sandro-label">

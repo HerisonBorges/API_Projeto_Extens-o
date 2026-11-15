@@ -210,7 +210,7 @@ export default function Followups({ versao }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <StatusBadge tom="pendente" icone="⚠">Parado há {plural(o.dias_parado, "dia", "dias")}</StatusBadge>
-                  <a href="#/funil" className="text-xs text-sandro-acento hover:underline">Ver no funil</a>
+                  <a href="#/funil" className="alvo-toque text-xs text-sandro-acento hover:underline">Ver no funil</a>
                 </div>
               </li>
             ))}

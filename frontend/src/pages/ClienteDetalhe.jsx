@@ -153,7 +153,7 @@ export default function ClienteDetalhe({ id, versao }) {
   }, [carregar, versao]);
 
   const voltar = (
-    <a href="#/clientes" className="inline-flex items-center gap-1 text-sm text-sandro-label hover:text-white">
+    <a href="#/clientes" className="alvo-toque inline-flex items-center gap-1 text-sm text-sandro-label hover:text-white">
       <span aria-hidden="true">←</span> Voltar para Clientes
     </a>
   );
@@ -167,7 +167,7 @@ export default function ClienteDetalhe({ id, versao }) {
     <div className="space-y-4">
       {voltar}
 
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         {/* Coluna esquerda: cadastro e oportunidades */}
         <div className="space-y-6 lg:col-span-2">
           <Card
@@ -224,7 +224,7 @@ export default function ClienteDetalhe({ id, versao }) {
               </ul>
             )}
             <div className="border-t border-sandro-borda/20 px-5 py-3">
-              <a href="#/followups" className="text-xs text-sandro-acento hover:underline">Ver todos os follow-ups →</a>
+              <a href="#/followups" className="alvo-toque text-xs text-sandro-acento hover:underline">Ver todos os follow-ups →</a>
             </div>
           </Card>
 
@@ -255,7 +255,7 @@ export default function ClienteDetalhe({ id, versao }) {
               </ul>
             )}
             <div className="border-t border-sandro-borda/20 px-5 py-3">
-              <a href="#/funil" className="text-xs text-sandro-acento hover:underline">Abrir no funil de vendas →</a>
+              <a href="#/funil" className="alvo-toque text-xs text-sandro-acento hover:underline">Abrir no funil de vendas →</a>
             </div>
           </Card>
         </div>

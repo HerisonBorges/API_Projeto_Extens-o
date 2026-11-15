@@ -68,7 +68,8 @@ export default function Relatorios({ versao }) {
           )}
         </div>
         <Botao variante="contorno" onClick={exportar} carregando={exportando} textoCarregando="Gerando PDF..."
-               disabled={!dados} aria-label={`Exportar faturamento (${NOME_PERIODO[periodo]}) em PDF`}>
+               disabled={!dados} aria-label={`Exportar faturamento (${NOME_PERIODO[periodo]}) em PDF`}
+               className="w-full sm:w-auto">
           <span aria-hidden="true">⤓</span> Exportar PDF
         </Botao>
       </div>
@@ -82,7 +83,7 @@ export default function Relatorios({ versao }) {
 
       {dados && (
         <>
-          <section aria-label="Indicadores do período" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <section aria-label="Indicadores do período" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Kpi rotulo="Faturamento" valor={formatarMoeda(dados.receita_total)} destaque
                  detalhe={`Vendas fechadas ${NOME_PERIODO[periodo]}`} />
             <Kpi rotulo="Taxa de conversão" valor={formatarPercentual(dados.taxa_conversao)}
@@ -91,7 +92,7 @@ export default function Relatorios({ versao }) {
             <Kpi rotulo="Negócios fechados" valor={dados.vendas_fechadas} />
           </section>
 
-          <div className="grid gap-6 xl:grid-cols-5">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-5">
             <Card titulo="Faturamento mensal (12 meses)" className="xl:col-span-3"
                   acao={<span className="text-xs text-sandro-label">Acumulado: {formatarMoeda(acumulado)}</span>}>
               <div className="p-5">
@@ -118,8 +119,8 @@ export default function Relatorios({ versao }) {
             {dados.canais.every((c) => c.interacoes === 0) ? (
               <Vazio>Nenhuma interação registrada neste período.</Vazio>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
+              <div className="rolagem-x">
+                <table className="w-full min-w-[36rem] text-left text-sm">
                   <caption className="sr-only">Interações e conversão por canal de contato</caption>
                   <thead className="border-b border-sandro-borda/20 text-xs uppercase tracking-wider text-sandro-label">
                     <tr>

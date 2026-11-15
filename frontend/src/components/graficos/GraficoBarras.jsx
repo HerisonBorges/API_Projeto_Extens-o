@@ -14,8 +14,13 @@ export default function GraficoBarras({ titulo, dados, formatar = String, cor = 
   const idTabela = useId();
   const maximo = Math.max(...dados.map((d) => d.valor), 0);
 
+  // Cada barra precisa de ~3.5rem para o valor ("R$ 12,5 mil") caber sem corte.
+  // Se a tela não comporta (ex.: 12 meses no celular), o gráfico rola dentro do card.
+  const larguraMinima = `${dados.length * 3.5}rem`;
+
   return (
-    <figure>
+    <figure className="rolagem-x">
+      <div style={{ minWidth: larguraMinima }}>
       <div className={`flex ${altura} items-end gap-2`} aria-hidden="true">
         {dados.map((d) => {
           const pct = maximo ? Math.max((d.valor / maximo) * 100, d.valor > 0 ? 3 : 0) : 0;
@@ -40,8 +45,12 @@ export default function GraficoBarras({ titulo, dados, formatar = String, cor = 
           </span>
         ))}
       </div>
+      </div>
 
-      <table id={idTabela} className="sr-only">
+      {/* sr-only no <div>, não na <table>: tabela ignora width/overflow e a legenda
+          longa alargava a página inteira no celular */}
+      <div className="sr-only">
+      <table id={idTabela}>
         <caption>{titulo}</caption>
         <tbody>
           {dados.map((d) => (
@@ -52,6 +61,7 @@ export default function GraficoBarras({ titulo, dados, formatar = String, cor = 
           ))}
         </tbody>
       </table>
+      </div>
     </figure>
   );
 }

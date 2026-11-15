@@ -48,7 +48,8 @@ export default function Login({ aviso, onEntrar }) {
       >
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -left-24 top-1/4 h-80 w-80 rounded-full bg-sandro-borda/15 blur-3xl"
+          className="pointer-events-none absolute -left-24 top-1/4 hidden h-80 w-80 rounded-full bg-sandro-borda/15
+                     blur-3xl md:block"
         />
         <div className="relative">
           <Logo tamanho="lg" comSlogan />

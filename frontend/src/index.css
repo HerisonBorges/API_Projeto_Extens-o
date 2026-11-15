@@ -14,10 +14,16 @@
 
 html {
   color-scheme: dark;
+  /* Sem "zoom" automático de fonte quando o celular gira para paisagem */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
   background: var(--color-sandro-fundo);
+  /* Nunca rolar a página para o lado: tabelas largas rolam dentro do próprio card */
+  overflow-x: clip;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Ícone nativo do relógio/calendário legível no tema escuro */
@@ -26,11 +32,56 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.8);
 }
 
+/*
+ * Toque (celular e tablet): alvos de no mínimo 48x48px (Material Design;
+ * WCAG 2.5.5 pede 44). Vale só para ponteiro "grosso" (dedo): no desktop com
+ * mouse a densidade continua a mesma.
+ */
+@media (pointer: coarse) {
+  button,
+  select,
+  textarea,
+  input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]),
+  nav a,
+  .alvo-toque,
+  label:has(> input.sr-only) {
+    min-height: 48px;
+  }
+
+  button {
+    min-width: 48px;
+  }
+
+  .alvo-toque {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* iOS dá zoom em campos com fonte < 16px ao focar: força 16px no toque */
+  input:not([type="radio"]):not([type="checkbox"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Rolagem horizontal nativa e suave para tabelas e o Kanban */
+.rolagem-x {
+  /* relative: textos .sr-only (position:absolute) dentro da tabela passam a ser
+     recortados por este contêiner; sem isso escapam e alargam a página no celular */
+  position: relative;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
