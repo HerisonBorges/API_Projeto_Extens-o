@@ -15,8 +15,10 @@ from iam import (
 )
 from seguranca import (
     SQL_DENTRO_JANELA,
+    SQL_SEGUNDOS_ATE_FIM_JANELA,
     TZ_EMPRESA,
     formatar_hora,
+    fuso_empresa,
     gerar_token,
     permitir_com_senha_pendente,
     resposta_horario_bloqueado,
@@ -41,6 +43,11 @@ def montar_usuario(u):
         "hora_inicio_acesso": formatar_hora(u["hora_inicio_acesso"]),
         "hora_fim_acesso": formatar_hora(u["hora_fim_acesso"]),
         "deve_trocar_senha": u["deve_trocar_senha"],
+        # A janela de acesso é avaliada neste fuso: a tela mostra o fuso junto do horário
+        "fuso_horario": fuso_empresa(),
+        # Contagem relativa (não um horário): o front agenda o fim da sessão sem
+        # depender do relógio do aparelho. NULL = acesso sem restrição de horário.
+        "segundos_ate_fim_janela": u.get("segundos_ate_fim_janela"),
     }
 
 
@@ -48,6 +55,7 @@ SELECT_USUARIO = f"""
     SELECT u.id, u.empresa_id, e.nome AS empresa_nome, u.nome, u.email, u.senha,
            u.perfil, u.hora_inicio_acesso, u.hora_fim_acesso,
            {SQL_DENTRO_JANELA.replace("hora_", "u.hora_")} AS dentro_janela,
+           {SQL_SEGUNDOS_ATE_FIM_JANELA.replace("hora_", "u.hora_")} AS segundos_ate_fim_janela,
            u.ativo, u.deve_trocar_senha, u.token_versao,
            (u.bloqueado_ate IS NOT NULL AND u.bloqueado_ate > NOW()) AS bloqueado,
            CEIL(EXTRACT(EPOCH FROM (u.bloqueado_ate - NOW())) / 60) AS minutos_bloqueio,

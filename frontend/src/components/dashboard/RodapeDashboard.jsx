@@ -1,13 +1,8 @@
 /* global __APP_VERSION__ */
 import { LogoSimbolo } from "../marca/Logo.jsx";
-import { formatarDataHora } from "../ui/formatos.js";
+import { descreverJanela, formatarDataHora } from "../ui/formatos.js";
 
 const VERSAO = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev";
-
-function janela(usuario) {
-  if (!usuario.hora_inicio_acesso || !usuario.hora_fim_acesso) return "Acesso sem restrição de horário";
-  return `Seu acesso: ${usuario.hora_inicio_acesso} às ${usuario.hora_fim_acesso}`;
-}
 
 /** Rodapé do Dashboard: identidade do CRM, contexto da sessão e atualização dos dados. */
 export default function RodapeDashboard({ usuario, atualizadoEm, onAtualizar, atualizando }) {
@@ -42,7 +37,7 @@ export default function RodapeDashboard({ usuario, atualizadoEm, onAtualizar, at
             <dt>Sessão:</dt>
             <dd className="text-slate-200">{usuario.nome} ({usuario.perfil})</dd>
           </div>
-          <div>{janela(usuario)}</div>
+          <div>{descreverJanela(usuario)}</div>
         </dl>
 
         <div className="space-y-2 md:text-right">

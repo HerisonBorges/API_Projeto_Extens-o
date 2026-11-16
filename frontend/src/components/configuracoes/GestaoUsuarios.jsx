@@ -15,7 +15,7 @@ import Campo, { classeEntrada } from "../ui/Campo.jsx";
 import { Aviso, Carregando, Erro, Vazio } from "../ui/Estado.jsx";
 import Modal from "../ui/Modal.jsx";
 import StatusBadge from "../ui/StatusBadge.jsx";
-import { formatarDataHora } from "../ui/formatos.js";
+import { formatarDataHora, formatarDuracao } from "../ui/formatos.js";
 
 const PERFIS = ["Atendimento", "Gestor"];
 
@@ -30,11 +30,37 @@ const ROTULO_ACAO = {
   login_bloqueado: "bloqueio automático por tentativas de login:",
 };
 
-function Situacao({ u }) {
+function Situacao({ u, agora }) {
   if (!u.ativo) return <StatusBadge tom="neutro" icone="○">Desativado</StatusBadge>;
   if (u.bloqueado) return <StatusBadge tom="bloqueado" icone="■">Bloqueado</StatusBadge>;
-  if (u.deve_trocar_senha) return <StatusBadge tom="pendente" icone="⏱">Aguardando 1º acesso</StatusBadge>;
+  if (u.deve_trocar_senha) return <SenhaPendente u={u} agora={agora} />;
   return <StatusBadge tom="permitido" icone="●">Ativo</StatusBadge>;
+}
+
+/** Senha temporária ainda não trocada: quanto falta para vencer, ou há quanto tempo venceu. */
+function SenhaPendente({ u, agora }) {
+  const expira = u.senha_temporaria_expira_em ? new Date(u.senha_temporaria_expira_em).getTime() : null;
+  if (expira == null) return <StatusBadge tom="pendente" icone="⏱">Aguardando 1º acesso</StatusBadge>;
+
+  const quando = formatarDataHora(u.senha_temporaria_expira_em);
+  if (expira <= agora) {
+    return (
+      <div className="space-y-1">
+        <span title={`Venceu em ${quando}`}>
+          <StatusBadge tom="bloqueado" icone="!">Senha temporária expirada há {formatarDuracao(agora - expira)}</StatusBadge>
+        </span>
+        <p className="text-xs text-sandro-label">Use “Redefinir senha” para gerar outra.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-1">
+      <StatusBadge tom="pendente" icone="⏱">Aguardando 1º acesso</StatusBadge>
+      <p className="text-xs text-sandro-label">
+        Senha temporária vence em {formatarDuracao(expira - agora)} <span className="whitespace-nowrap">({quando})</span>
+      </p>
+    </div>
+  );
 }
 
 /** Mostra a senha temporária UMA vez, com cópia e orientação de entrega. */
@@ -222,9 +248,17 @@ export default function GestaoUsuarios({ usuarioLogado }) {
   const [senhaGerada, setSenhaGerada] = useState(null);
   const [versao, setVersao] = useState(0);
 
+  // Instante da consulta: base do "vence em / expirada há" (render puro, sem Date.now())
+  const [consultadoEm, setConsultadoEm] = useState(0);
+
   const carregar = useCallback(() => {
     setErro(null);
-    listarUsuarios().then(setUsuarios).catch((e) => setErro(e.message));
+    listarUsuarios()
+      .then((lista) => {
+        setConsultadoEm(Date.now());
+        setUsuarios(lista);
+      })
+      .catch((e) => setErro(e.message));
   }, []);
 
   useEffect(carregar, [carregar, versao]);
@@ -278,7 +312,7 @@ export default function GestaoUsuarios({ usuarioLogado }) {
                         <p className="text-xs text-sandro-label">{u.email}</p>
                       </td>
                       <td className="px-5 py-3">{u.perfil}</td>
-                      <td className="px-5 py-3"><Situacao u={u} /></td>
+                      <td className="px-5 py-3"><Situacao u={u} agora={consultadoEm} /></td>
                       <td className="px-5 py-3 text-xs text-sandro-label">
                         {u.ultimo_login_em ? formatarDataHora(u.ultimo_login_em) : "Nunca"}
                       </td>

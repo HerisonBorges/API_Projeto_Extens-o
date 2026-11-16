@@ -25,6 +25,16 @@ export function definirAoExigirTrocaSenha(callback) {
   aoExigirTrocaSenha = callback;
 }
 
+/**
+ * A API manda quantos segundos faltam para a janela de acesso acabar (pelo
+ * relógio do servidor). Aqui vira um instante local: só a contagem relativa
+ * importa, então relógio ou fuso errado no aparelho não adiantam nem atrasam o fim.
+ */
+function comFimDaJanela(usuario) {
+  const segundos = usuario.segundos_ate_fim_janela;
+  return { ...usuario, fim_janela_em: segundos == null ? null : Date.now() + segundos * 1000 };
+}
+
 function salvarSessao(token, usuario) {
   sessionStorage.setItem(CHAVE_TOKEN, token);
   sessionStorage.setItem(CHAVE_USUARIO, JSON.stringify(usuario));
@@ -109,8 +119,19 @@ const comQuery = (caminho, params) => {
 // ---- Autenticação ---------------------------------------------------------
 export async function entrar(email, senha) {
   const corpo = await requisicao("/auth/login", { method: "POST", body: { email, senha } });
-  salvarSessao(corpo.token, corpo.usuario);
-  return corpo.usuario;
+  const usuario = comFimDaJanela(corpo.usuario);
+  salvarSessao(corpo.token, usuario);
+  return usuario;
+}
+
+/**
+ * Relê a própria conta no servidor (perfil, janela, tempo restante).
+ * Fora do horário a API responde HORARIO_BLOQUEADO e o interceptor encerra a sessão.
+ */
+export async function obterMeusDados() {
+  const usuario = comFimDaJanela(await requisicao("/auth/me"));
+  if (sessionStorage.getItem(CHAVE_TOKEN)) sessionStorage.setItem(CHAVE_USUARIO, JSON.stringify(usuario));
+  return usuario;
 }
 
 /** Troca a própria senha. O servidor encerra as outras sessões e devolve um token novo. */
@@ -119,8 +140,9 @@ export async function alterarMinhaSenha(senhaAtual, novaSenha) {
     method: "PUT",
     body: { senha_atual: senhaAtual, nova_senha: novaSenha },
   });
-  salvarSessao(corpo.token, corpo.usuario);
-  return corpo.usuario;
+  const usuario = comFimDaJanela(corpo.usuario);
+  salvarSessao(corpo.token, usuario);
+  return usuario;
 }
 
 // ---- Usuários (somente Gestor) ---------------------------------------------

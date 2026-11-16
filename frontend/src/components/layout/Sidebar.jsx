@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { ROTAS, podeAcessar } from "../../rotas.js";
 import Logo, { LogoSimbolo } from "../marca/Logo.jsx";
+import { descreverJanela } from "../ui/formatos.js";
 
 const ICONES = {
   dashboard: "◧",
@@ -159,6 +160,7 @@ function NavegacaoCelular({ usuario, ativa, onSair, onAlterarSenha }) {
           <div className="border-t border-sandro-borda/25 px-5 py-4">
             <p className="truncate text-sm text-white">{usuario.nome}</p>
             <p className="text-xs text-sandro-label">{usuario.perfil} · {usuario.empresa_nome ?? "Empresa"}</p>
+            <p className="mt-1 text-xs text-sandro-label">{descreverJanela(usuario)}</p>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <button type="button" onClick={acao(onAlterarSenha)}
                       className={`min-h-12 rounded-lg border border-sandro-borda/30 text-sm text-slate-200 ${focoVisivel}`}>
@@ -265,6 +267,9 @@ function SidebarDesktop({ usuario, ativa, onSair, onAlterarSenha }) {
             <p className="text-xs text-sandro-label">{usuario.perfil}</p>
           </div>
         </div>
+        <p className={`mt-3 text-xs leading-snug text-sandro-label ${md("", "sr-only")}`}>
+          {descreverJanela(usuario)}
+        </p>
 
         {recolhida ? (
           <div className="mt-4 flex flex-col items-center gap-2">

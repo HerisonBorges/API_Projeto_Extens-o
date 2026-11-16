@@ -71,3 +71,21 @@ export const diasDesde = (isoTimestamp) =>
   Math.max(0, Math.floor((Date.now() - new Date(isoTimestamp)) / 86_400_000));
 
 export const plural = (n, singular, pluralTexto) => `${n} ${n === 1 ? singular : pluralTexto}`;
+
+// Duração legível: "45 min", "5 h", "3 dias" (arredonda para cima: "vence em 1 min", nunca "0")
+export function formatarDuracao(ms) {
+  const minutos = Math.max(1, Math.ceil(Math.abs(ms) / 60_000));
+  if (minutos < 60) return `${minutos} min`;
+  const horas = Math.round(minutos / 60);
+  if (horas < 48) return `${horas} h`;
+  return plural(Math.round(horas / 24), "dia", "dias");
+}
+
+// Nome amigável do fuso em que a API avalia a janela de acesso
+const NOMES_FUSO = { "America/Sao_Paulo": "horário de Brasília" };
+export const rotuloFuso = (fuso) => NOMES_FUSO[fuso] ?? fuso ?? "horário da empresa";
+
+export function descreverJanela(usuario) {
+  if (!usuario.hora_inicio_acesso || !usuario.hora_fim_acesso) return "Acesso sem restrição de horário";
+  return `Acesso das ${usuario.hora_inicio_acesso} às ${usuario.hora_fim_acesso} (${rotuloFuso(usuario.fuso_horario)})`;
+}

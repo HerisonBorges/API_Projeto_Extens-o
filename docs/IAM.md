@@ -35,6 +35,10 @@ Gerada pelo sistema na **criação**, **redefinição** e **reativação** da co
   `PUT /auth/senha`.
 - **Reativar sempre gera senha nova**: a antiga pode ter vazado enquanto a
   conta estava parada.
+- Na tela de Configurações, o Gestor vê quanto falta para cada senha
+  temporária vencer ("vence em 3 dias (18/11/2026, 00:52)") ou há quanto tempo
+  ela venceu ("Senha temporária expirada há 2 dias"), a partir de
+  `senha_temporaria_expira_em`. Quem emitiu e quando fica em `auditoria_usuarios`.
 
 ## Login
 
@@ -46,6 +50,30 @@ Gerada pelo sistema na **criação**, **redefinição** e **reativação** da co
   Gestor desbloqueia na hora.
 - Mensagens específicas (conta desativada, senha temporária expirada, fora do
   horário) só aparecem **depois** de a senha conferir.
+
+## Janela de acesso e fim da sessão
+
+- A jornada é **por usuário** (`hora_inicio_acesso` / `hora_fim_acesso`),
+  avaliada no fuso da empresa (`TZ_EMPRESA`, padrão `America/Sao_Paulo`). A
+  tela mostra a jornada com o fuso ("horário de Brasília") na sidebar, na
+  gaveta do celular e no rodapé do Dashboard.
+- **O servidor é a autoridade:** toda requisição fora da jornada recebe
+  `403 HORARIO_BLOQUEADO`, e o front volta para o login.
+- **Fim proativo no front:** `/auth/login`, `/auth/me` e `PUT /auth/senha`
+  devolvem `segundos_ate_fim_janela`, calculado pelo relógio do banco. O front
+  agenda o fim pela contagem relativa, então relógio ou fuso errado no
+  aparelho não interferem. Assim:
+  - 5 minutos antes aparece um aviso com contagem regressiva;
+  - no fim, o front confirma em `/auth/me`. Se o Gestor estendeu a jornada, a
+    sessão continua com o novo prazo; se não, a sessão é encerrada;
+  - se o servidor não responder nesse momento, a sessão é encerrada mesmo
+    assim (falha fechada);
+  - ao abrir o app, voltar para a aba, reganhar o foco ou reconectar, o front
+    revalida em `/auth/me` (timers atrasam com aba em segundo plano e aparelho
+    suspenso).
+- Limitação: uma mudança de jornada feita pelo Gestor só chega a uma tela
+  parada na próxima revalidação (ou no fim do prazo antigo). Requisições,
+  porém, já obedecem à jornada nova na hora.
 
 ## Endpoints
 

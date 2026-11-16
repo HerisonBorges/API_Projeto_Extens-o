@@ -48,6 +48,21 @@ SQL_DENTRO_JANELA = """
 """
 
 
+# Expressão SQL: segundos até o fim da janela, contados pelo relógio do banco
+# (o do celular/notebook pode estar errado ou em outro fuso). NULL = irrestrito.
+# Só faz sentido com o usuário dentro da janela, que é quando a API responde.
+# time - time pode ser negativo (fim depois da meia-noite): +24h e módulo 1 dia.
+# Requer o parâmetro nomeado %(tz)s.
+SQL_SEGUNDOS_ATE_FIM_JANELA = """
+    CASE
+        WHEN hora_inicio_acesso IS NULL OR hora_fim_acesso IS NULL THEN NULL
+        ELSE CEIL(EXTRACT(EPOCH FROM (
+                 hora_fim_acesso - (NOW() AT TIME ZONE %(tz)s)::time + INTERVAL '24 hours'
+             )))::bigint %% 86400
+    END
+"""
+
+
 def formatar_hora(valor):
     return valor.strftime("%H:%M") if valor is not None else None
 

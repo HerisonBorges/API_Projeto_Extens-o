@@ -12,6 +12,7 @@ import Followups from "./pages/Followups.jsx";
 import Funil from "./pages/Funil.jsx";
 import Login from "./pages/Login.jsx";
 import Relatorios from "./pages/Relatorios.jsx";
+import ControleJanelaAcesso from "./components/conta/ControleJanelaAcesso.jsx";
 import FormularioNovaSenha from "./components/conta/FormularioNovaSenha.jsx";
 import Modal from "./components/ui/Modal.jsx";
 import TrocaSenhaObrigatoria from "./pages/TrocaSenhaObrigatoria.jsx";
@@ -81,17 +82,23 @@ export default function App() {
     );
   }
 
+  // Fim automático da sessão no fim da janela de acesso (vale também na troca de senha)
+  const controleJanela = <ControleJanelaAcesso usuario={usuario} onAtualizarUsuario={setUsuario} />;
+
   // Senha temporária: nenhuma tela do sistema antes da troca
   if (usuario.deve_trocar_senha) {
     return (
-      <TrocaSenhaObrigatoria
-        usuario={usuario}
-        onConcluido={(u) => {
-          setUsuario(u);
-          setAviso("Senha definida. Bem-vindo(a) ao SANDRO CRM.");
-        }}
-        onSair={() => encerrarSessao(null)}
-      />
+      <>
+        <TrocaSenhaObrigatoria
+          usuario={usuario}
+          onConcluido={(u) => {
+            setUsuario(u);
+            setAviso("Senha definida. Bem-vindo(a) ao SANDRO CRM.");
+          }}
+          onSair={() => encerrarSessao(null)}
+        />
+        {controleJanela}
+      </>
     );
   }
 
@@ -123,6 +130,8 @@ export default function App() {
             : <Pagina usuario={usuario} versao={versao} />}
         </main>
       </div>
+
+      {controleJanela}
 
       {alterandoSenha && (
         <Modal titulo="Alterar minha senha"
