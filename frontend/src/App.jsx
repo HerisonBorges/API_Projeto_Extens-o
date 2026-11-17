@@ -126,7 +126,7 @@ export default function App() {
           <Aviso mensagem={aviso} />
 
           {detalheCliente
-            ? <ClienteDetalhe id={rota.id} versao={versao} />
+            ? <ClienteDetalhe id={rota.id} usuario={usuario} versao={versao} />
             : <Pagina usuario={usuario} versao={versao} />}
         </main>
       </div>

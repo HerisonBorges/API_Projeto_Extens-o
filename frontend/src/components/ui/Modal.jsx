@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from "react";
+import { createPortal } from "react-dom";
 
 const FOCAVEIS = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href]';
 
@@ -85,7 +86,10 @@ export default function Modal({ titulo, descricao, onFechar, bloqueado = false, 
     return () => document.removeEventListener("keydown", aoTeclar);
   }, []);
 
-  return (
+  // Portal no <body>: um ancestral com backdrop-filter/transform (ex.: Card com
+  // md:backdrop-blur-sm) vira o containing block de position:fixed e prenderia
+  // o modal dentro do card, coberto pelos vizinhos
+  return createPortal(
     <div
       onMouseDown={(e) => e.target === e.currentTarget && fecharRef.current()}
       // Celular: "bottom sheet" colado na base (alcance do polegar). sm+: centralizado.
@@ -111,6 +115,7 @@ export default function Modal({ titulo, descricao, onFechar, bloqueado = false, 
         )}
         <div className="mt-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

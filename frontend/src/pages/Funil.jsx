@@ -171,9 +171,9 @@ export default function Funil({ versao }) {
       {criando && (
         <NovaOportunidadeModal
           onFechar={() => setCriando(false)}
-          onCriada={({ titulo, etapa }) => {
+          onCriada={({ titulo, etapa, repeticao }) => {
             setCriando(false);
-            setAnuncio(`Oportunidade "${titulo}" criada em ${etapa}.`);
+            setAnuncio(`Oportunidade "${titulo}" criada em ${etapa}.${repeticao ? ` Repete ${repeticao}.` : ""}`);
             carregar();
           }}
         />

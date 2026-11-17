@@ -24,6 +24,7 @@ ARQUIVOS = [
     "migracao_iam_usuarios.sql",
     "migracao_clientes_edicao.sql",
     "migracao_fuso_horario.sql",
+    "migracao_importacao_recorrencias.sql",
 ]
 
 

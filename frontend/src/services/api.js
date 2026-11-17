@@ -84,29 +84,88 @@ async function requisicao(caminho, { method = "GET", body, arquivo = false } = {
   }
 
   const corpo = await resposta.json().catch(() => ({}));
+  verificarResposta(resposta.status, corpo, token);
+  return corpo;
+}
 
-  if (resposta.status === 403 && corpo.error === "HORARIO_BLOQUEADO") {
+/**
+ * Regras de sessão comuns ao fetch e ao upload com progresso (XHR).
+ * Lança ApiError quando a resposta não é de sucesso.
+ */
+function verificarResposta(status, corpo, token) {
+  if (status === 403 && corpo.error === "HORARIO_BLOQUEADO") {
     encerrarSessao(corpo.message);
     throw new ApiError(403, corpo.message, "HORARIO_BLOQUEADO");
   }
 
   // Sessão derrubada pelo servidor: expirou, senha trocada, conta desativada etc.
-  if (resposta.status === 401 && token) {
+  if (status === 401 && token) {
     const motivo = corpo.erro ?? "Sua sessão expirou. Entre novamente.";
     encerrarSessao(motivo);
     throw new ApiError(401, motivo, corpo.error);
   }
 
-  if (resposta.status === 403 && corpo.error === "TROCA_SENHA_OBRIGATORIA") {
+  if (status === 403 && corpo.error === "TROCA_SENHA_OBRIGATORIA") {
     aoExigirTrocaSenha();
     throw new ApiError(403, corpo.erro, "TROCA_SENHA_OBRIGATORIA");
   }
 
-  if (!resposta.ok) {
-    throw new ApiError(resposta.status, corpo.erro ?? corpo.message ?? "Erro inesperado.", corpo.error);
+  if (status === 413) {
+    throw new ApiError(413, "O arquivo passa de 1 MB. Divida em arquivos menores.");
   }
 
-  return corpo;
+  if (status < 200 || status >= 300) {
+    const erro = new ApiError(status, corpo.erro ?? corpo.message ?? "Erro inesperado.", corpo.error);
+    erro.corpo = corpo; // ex.: lista de erros por linha da importação (422)
+    throw erro;
+  }
+}
+
+/**
+ * Envia um arquivo (multipart) informando o progresso do upload.
+ * fetch não expõe progresso de envio; XMLHttpRequest sim.
+ */
+function enviarArquivo(caminho, arquivo, { onProgresso } = {}) {
+  const token = sessionStorage.getItem(CHAVE_TOKEN);
+  return new Promise((resolver, rejeitar) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${API_URL}${caminho}`);
+    if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.responseType = "json";
+    xhr.timeout = 120_000;
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgresso) onProgresso(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      try {
+        verificarResposta(xhr.status, xhr.response ?? {}, token);
+        resolver(xhr.response ?? {});
+      } catch (erro) {
+        rejeitar(erro);
+      }
+    };
+    const semConexao = () => rejeitar(new ApiError(0, "Não foi possível falar com o servidor. Verifique sua conexão."));
+    xhr.onerror = semConexao;
+    xhr.ontimeout = semConexao;
+    const dados = new FormData();
+    dados.append("arquivo", arquivo);
+    xhr.send(dados);
+  });
+}
+
+/** Baixa um arquivo da API e dispara o download no navegador. */
+async function baixarArquivo(caminho, nomePadrao) {
+  const { blob, nome } = await requisicao(caminho, { arquivo: true });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = nome === "sandro-crm.pdf" ? nomePadrao : nome;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  // Libera a memória depois que o navegador iniciar o download
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  return link.download;
 }
 
 const comQuery = (caminho, params) => {
@@ -193,19 +252,26 @@ export const buscarAlertas = () => requisicao("/tarefas/alertas");
 export const buscarRelatorio = (periodo) => requisicao(comQuery("/relatorios/vendas", { periodo }));
 
 /** Baixa o PDF de faturamento do período e dispara o download no navegador. */
-export async function baixarPdfFaturamento(periodo) {
-  const { blob, nome } = await requisicao(comQuery("/relatorios/vendas/pdf", { periodo }), { arquivo: true });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = nome;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  // Libera a memória depois que o navegador iniciar o download
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
-  return nome;
-}
+export const baixarPdfFaturamento = (periodo) =>
+  baixarArquivo(comQuery("/relatorios/vendas/pdf", { periodo }), `sandro-crm-faturamento-${periodo}.pdf`);
+
+// ---- Planilhas de clientes --------------------------------------------------
+export const baixarModeloClientes = (formato) =>
+  baixarArquivo(`/clientes/modelo?formato=${formato}`, `sandro-crm-modelo-clientes.${formato}`);
+export const exportarClientes = (formato) =>
+  baixarArquivo(`/clientes/exportar?formato=${formato}`, `sandro-crm-clientes.${formato}`);
+/** simular=true: só valida e devolve a prévia, sem gravar. */
+export const importarClientes = (arquivo, { simular = false, onProgresso } = {}) =>
+  enviarArquivo(`/clientes/importar${simular ? "?simular=1" : ""}`, arquivo, { onProgresso });
+
+// ---- Recorrências -----------------------------------------------------------
+export const listarRecorrencias = ({ clienteId } = {}) =>
+  requisicao(comQuery("/recorrencias", { cliente_id: clienteId }));
+export const criarRecorrencia = (dados) => requisicao("/recorrencias", { method: "POST", body: dados });
+export const alterarRecorrencia = (id, dados) => requisicao(`/recorrencias/${id}`, { method: "PUT", body: dados });
+export const ativarRecorrencia = (id, ativo) =>
+  requisicao(`/recorrencias/${id}/ativo`, { method: "PATCH", body: { ativo } });
+export const excluirRecorrencia = (id) => requisicao(`/recorrencias/${id}`, { method: "DELETE" });
 
 // ---- Configurações --------------------------------------------------------
 export const buscarConfiguracoes = () => requisicao("/configuracoes");

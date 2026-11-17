@@ -1,9 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Blueprint, g, jsonify, request
 
 from database.conexao import conectar_banco
-from seguranca import TZ_EMPRESA, perfil_requerido, token_obrigatorio
+from recorrencia import hoje_na_empresa, validar_recorrencia
+from routes.recorrencias import inserir_recorrencia
+from seguranca import TZ_EMPRESA, fuso_empresa, perfil_requerido, token_obrigatorio
 
 
 oportunidades_bp = Blueprint(
@@ -180,6 +182,19 @@ def criar_oportunidade():
             "erro": f"Etapa inválida. Use uma de: {ETAPAS_VALIDAS}"
         }), 400
 
+    # Opcional: repetir esta oportunidade ("toda semana", "todo dia 5")
+    regra = dados.get("recorrencia")
+    campos_recorrencia = None
+    if regra is not None:
+        if not isinstance(regra, dict):
+            return jsonify({"erro": "recorrencia inválida."}), 400
+        if cliente_id is None:
+            return jsonify({"erro": "Para repetir a oportunidade, informe o cliente."}), 400
+        campos_recorrencia, problema = validar_recorrencia(
+            {**regra, "tipo": "oportunidade", "titulo": titulo, "valor": valor})
+        if problema:
+            return jsonify({"erro": problema}), 400
+
     conexao = conectar_banco()
     cursor = conexao.cursor()
 
@@ -190,12 +205,19 @@ def criar_oportunidade():
             "erro": "Cliente não encontrado."
         }), 404
 
+    recorrencia_id = None
+    if campos_recorrencia:
+        # A de hoje é esta: a primeira repetição começa amanhã
+        amanha = hoje_na_empresa(cursor, fuso_empresa()) + timedelta(days=1)
+        recorrencia_id = inserir_recorrencia(cursor, g.empresa_id, cliente_id, campos_recorrencia,
+                                             g.usuario_id, amanha)
+
     cursor.execute("""
         INSERT INTO oportunidades (empresa_id, cliente_id, titulo, valor, etapa,
-                                   responsavel_id)
-        VALUES (%s, %s, %s, %s, %s, %s)
+                                   responsavel_id, recorrencia_id)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         RETURNING id;
-    """, (g.empresa_id, cliente_id, titulo, valor, etapa, g.usuario_id))
+    """, (g.empresa_id, cliente_id, titulo, valor, etapa, g.usuario_id, recorrencia_id))
 
     oportunidade_id = cursor.fetchone()[0]
 
@@ -206,7 +228,8 @@ def criar_oportunidade():
 
     return jsonify({
         "mensagem": "Oportunidade criada com sucesso!",
-        "oportunidade_id": oportunidade_id
+        "oportunidade_id": oportunidade_id,
+        "recorrencia_id": recorrencia_id,
     }), 201
 
 

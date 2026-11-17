@@ -4,7 +4,8 @@ import { criarOportunidade, listarClientes } from "../../services/api.js";
 import Botao from "../ui/Botao.jsx";
 import Campo, { classeEntrada } from "../ui/Campo.jsx";
 import Modal from "../ui/Modal.jsx";
-import { ETAPAS, ETAPA_FINAL } from "../ui/formatos.js";
+import { ETAPAS, ETAPA_FINAL, descreverRecorrencia } from "../ui/formatos.js";
+import CamposFrequencia, { FREQUENCIA_PADRAO, corpoFrequencia } from "../recorrencias/CamposFrequencia.jsx";
 
 // Começa no funil: abrir direto em "Fechado" seria registrar venda, não oportunidade
 const ETAPAS_INICIAIS = ETAPAS.filter((e) => e !== ETAPA_FINAL);
@@ -23,6 +24,14 @@ export default function NovaOportunidadeModal({ cliente = null, onFechar, onCria
   });
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState(null);
+  const [repetir, setRepetir] = useState(false);
+  const [frequencia, setFrequencia] = useState(FREQUENCIA_PADRAO);
+  // A oportunidade de hoje é esta: a primeira repetição conta a partir de amanhã
+  const [amanha] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d;
+  });
 
   const alterar = (campo) => (e) => setForm((f) => ({ ...f, [campo]: e.target.value }));
 
@@ -48,8 +57,14 @@ export default function NovaOportunidadeModal({ cliente = null, onFechar, onCria
         titulo: form.titulo.trim(),
         valor,
         etapa: form.etapa,
+        ...(repetir && { recorrencia: corpoFrequencia(frequencia) }),
       });
-      onCriada({ id: r.oportunidade_id, titulo: form.titulo.trim(), etapa: form.etapa });
+      onCriada({
+        id: r.oportunidade_id,
+        titulo: form.titulo.trim(),
+        etapa: form.etapa,
+        repeticao: repetir ? descreverRecorrencia(frequencia).toLowerCase() : null,
+      });
     } catch (erroApi) {
       setErro(erroApi.message);
       setEnviando(false);
@@ -100,11 +115,25 @@ export default function NovaOportunidadeModal({ cliente = null, onFechar, onCria
           )}
         </Campo>
 
+        <div className="space-y-3 rounded-lg border border-sandro-borda/25 p-3 sm:col-span-2">
+          <label className="flex min-h-12 cursor-pointer items-center gap-3 text-sm text-white">
+            <input type="checkbox" checked={repetir} onChange={(e) => setRepetir(e.target.checked)}
+                   className="h-5 w-5 shrink-0 accent-sandro-acento" />
+            <span>
+              Repetir automaticamente
+              <span className="block text-xs text-sandro-label">
+                Ex.: cliente que compra toda semana. Um card novo entra em Prospecção em cada data.
+              </span>
+            </span>
+          </label>
+          {repetir && <CamposFrequencia valor={frequencia} onChange={setFrequencia} aPartirDe={amanha} />}
+        </div>
+
         {erro && (
           <p role="alert" className="rounded-lg bg-rose-950/80 px-3 py-2 text-sm text-rose-300 sm:col-span-2">{erro}</p>
         )}
 
-        <div className="flex justify-end gap-3 pt-1 sm:col-span-2">
+        <div className="flex flex-col-reverse gap-3 pt-1 sm:col-span-2 sm:flex-row sm:justify-end">
           <Botao variante="fantasma" onClick={onFechar} disabled={enviando}>Cancelar</Botao>
           <Botao variante="primario" type="submit" carregando={enviando} textoCarregando="Criando...">
             Criar oportunidade

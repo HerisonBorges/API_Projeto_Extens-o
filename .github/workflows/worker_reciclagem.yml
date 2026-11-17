@@ -88,8 +88,8 @@ jobs:
           fi
           echo "Secrets presentes."
 
-      - name: Conferir que o worker carrega nesta versão do Python
-        run: python -c "import database.worker_reciclagem as w; print('worker ok em', __import__('sys').version.split()[0])"
+      - name: Conferir que os workers carregam nesta versão do Python
+        run: python -c "import database.worker_reciclagem, database.worker_recorrencias, sys; print('workers ok em', sys.version.split()[0])"
 
       - name: Executar o worker
         run: |
@@ -105,3 +105,21 @@ jobs:
             argumentos+=(--empresa "$ENTRADA_EMPRESA")
           fi
           python -m database.worker_reciclagem "${argumentos[@]}"
+
+      # Mesmo agendamento e mesmos secrets. Roda mesmo se a reciclagem falhar:
+      # uma regra quebrada de um não pode travar o outro.
+      - name: Executar o worker de recorrências
+        if: ${{ !cancelled() }}
+        run: |
+          argumentos=()
+          if [ "$ENTRADA_SIMULACAO" = "true" ]; then
+            argumentos+=(--dry-run)
+          fi
+          if [ -n "$ENTRADA_EMPRESA" ]; then
+            if ! [[ "$ENTRADA_EMPRESA" =~ ^[0-9]+$ ]]; then
+              echo "::error::empresa deve ser um número inteiro."
+              exit 1
+            fi
+            argumentos+=(--empresa "$ENTRADA_EMPRESA")
+          fi
+          python -m database.worker_recorrencias "${argumentos[@]}"

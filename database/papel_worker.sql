@@ -49,3 +49,48 @@ CREATE POLICY worker_reciclagem ON public.oportunidades
     FOR ALL TO sandro_worker
     USING (true)
     WITH CHECK (true);
+
+-- ---------------------------------------------------------------------------
+-- Worker de recorrências (database/worker_recorrencias.py)
+-- Requer database/migracao_importacao_recorrencias.sql. Continua sem DELETE e
+-- sem ler nome, e-mail ou telefone de clientes: só id, empresa e status.
+-- ---------------------------------------------------------------------------
+REVOKE ALL ON public.recorrencias FROM sandro_worker;
+GRANT SELECT, UPDATE ON public.recorrencias TO sandro_worker;
+
+REVOKE ALL ON public.recorrencia_execucoes FROM sandro_worker;
+GRANT SELECT, INSERT, UPDATE ON public.recorrencia_execucoes TO sandro_worker;
+
+-- Follow-ups: só cria (o SELECT em id é o mínimo para o RETURNING id)
+REVOKE ALL ON public.tarefas FROM sandro_worker;
+GRANT INSERT ON public.tarefas TO sandro_worker;
+GRANT SELECT (id) ON public.tarefas TO sandro_worker;
+
+-- Clientes: só o necessário para pular cliente Inativo
+REVOKE ALL ON public.clientes FROM sandro_worker;
+GRANT SELECT (id, empresa_id, status) ON public.clientes TO sandro_worker;
+
+DO $$
+BEGIN
+    EXECUTE format('GRANT USAGE ON SEQUENCE %s TO sandro_worker',
+                   pg_get_serial_sequence('public.tarefas', 'id'));
+    EXECUTE format('GRANT USAGE ON SEQUENCE %s TO sandro_worker',
+                   pg_get_serial_sequence('public.recorrencia_execucoes', 'id'));
+END $$;
+
+DROP POLICY IF EXISTS worker_recorrencias ON public.recorrencias;
+CREATE POLICY worker_recorrencias ON public.recorrencias
+    FOR ALL TO sandro_worker USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS worker_recorrencias ON public.recorrencia_execucoes;
+CREATE POLICY worker_recorrencias ON public.recorrencia_execucoes
+    FOR ALL TO sandro_worker USING (true) WITH CHECK (true);
+
+-- INSERT ... RETURNING também passa pela política de SELECT
+DROP POLICY IF EXISTS worker_recorrencias ON public.tarefas;
+CREATE POLICY worker_recorrencias ON public.tarefas
+    FOR ALL TO sandro_worker USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS worker_recorrencias ON public.clientes;
+CREATE POLICY worker_recorrencias ON public.clientes
+    FOR SELECT TO sandro_worker USING (true);

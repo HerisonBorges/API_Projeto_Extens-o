@@ -24,8 +24,10 @@ from routes.clientes import clientes_bp  # noqa: E402
 from routes.configuracoes import configuracoes_bp  # noqa: E402
 from routes.dashboard import dashboard_bp  # noqa: E402
 from routes.health import health_bp  # noqa: E402
+from routes.importacao import importacao_bp  # noqa: E402
 from routes.interacoes import interacoes_bp  # noqa: E402
 from routes.oportunidades import oportunidades_bp  # noqa: E402
+from routes.recorrencias import recorrencias_bp  # noqa: E402
 from routes.relatorios import relatorios_bp  # noqa: E402
 from routes.tarefas import tarefas_bp  # noqa: E402
 from routes.usuarios import usuarios_bp  # noqa: E402
@@ -52,7 +54,8 @@ logging.basicConfig(
 app.teardown_appcontext(devolver_conexoes_da_requisicao)
 
 # Desenvolvimento: front local. Produção: somente as origens de CORS_ORIGINS.
-CORS(app, resources={r"/*": {"origins": origens_cors()}})
+# expose_headers: o front lê o nome do arquivo baixado (PDF, planilhas) entre domínios
+CORS(app, resources={r"/*": {"origins": origens_cors()}}, expose_headers=["Content-Disposition"])
 
 # Documentação interativa expõe o mapa da API: desligada em produção por padrão
 if not PRODUCAO or os.getenv("SWAGGER_ATIVO") == "1":
@@ -62,6 +65,8 @@ for blueprint in (
     health_bp,
     auth_bp,
     clientes_bp,
+    importacao_bp,
+    recorrencias_bp,
     configuracoes_bp,
     dashboard_bp,
     oportunidades_bp,

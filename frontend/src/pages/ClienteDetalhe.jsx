@@ -11,9 +11,11 @@ import {
   diasAte,
   formatarData,
   formatarDataHora,
+  formatarDocumento,
   formatarMoeda,
 } from "../components/ui/formatos.js";
 import EditarClienteModal from "../components/clientes/EditarClienteModal.jsx";
+import RecorrenciasCliente from "../components/recorrencias/RecorrenciasCliente.jsx";
 import NovoFollowupModal from "../components/followups/NovoFollowupModal.jsx";
 import NovaOportunidadeModal from "../components/oportunidades/NovaOportunidadeModal.jsx";
 import {
@@ -115,7 +117,7 @@ function NovaInteracao({ clienteId, oportunidades, onSalva }) {
   );
 }
 
-export default function ClienteDetalhe({ id, versao }) {
+export default function ClienteDetalhe({ id, usuario, versao }) {
   const [dados, setDados] = useState(null);
   const [erro, setErro] = useState(null);
   const [editando, setEditando] = useState(false);
@@ -185,6 +187,7 @@ export default function ClienteDetalhe({ id, versao }) {
             <dl className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
               <Dado rotulo="E-mail">{cliente.email}</Dado>
               <Dado rotulo="Telefone">{cliente.telefone}</Dado>
+              <Dado rotulo="CPF/CNPJ">{formatarDocumento(cliente.documento)}</Dado>
               <Dado rotulo="Código">#{cliente.id}</Dado>
               <Dado rotulo="Interações">{interacoes.length}</Dado>
             </dl>
@@ -227,6 +230,8 @@ export default function ClienteDetalhe({ id, versao }) {
               <a href="#/followups" className="alvo-toque text-xs text-sandro-acento hover:underline">Ver todos os follow-ups →</a>
             </div>
           </Card>
+
+          <RecorrenciasCliente cliente={cliente} usuario={usuario} onAviso={setAviso} />
 
           <Card
             titulo="Oportunidades associadas"
@@ -326,9 +331,9 @@ export default function ClienteDetalhe({ id, versao }) {
         <NovaOportunidadeModal
           cliente={cliente}
           onFechar={() => setNovaOportunidade(false)}
-          onCriada={({ titulo, etapa }) => {
+          onCriada={({ titulo, etapa, repeticao }) => {
             setNovaOportunidade(false);
-            setAviso(`Oportunidade "${titulo}" criada em ${etapa}.`);
+            setAviso(`Oportunidade "${titulo}" criada em ${etapa}.${repeticao ? ` Repete ${repeticao}.` : ""}`);
             carregar();
           }}
         />

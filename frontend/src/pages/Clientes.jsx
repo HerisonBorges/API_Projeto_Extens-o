@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import ImportarClientesModal from "../components/clientes/ImportarClientesModal.jsx";
 import Abas from "../components/ui/Abas.jsx";
 import Botao from "../components/ui/Botao.jsx";
 import Card from "../components/ui/Card.jsx";
@@ -29,6 +30,7 @@ export default function Clientes({ usuario, versao }) {
   const [excluindo, setExcluindo] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [aviso, setAviso] = useState(null);
+  const [importando, setImportando] = useState(false);
 
   const ehGestor = usuario.perfil === "Gestor";
 
@@ -88,10 +90,17 @@ export default function Clientes({ usuario, versao }) {
               { valor: "inativos", rotulo: "Inativos", contagem: contagem(ehInativo) },
             ]}
           />
-          <div className="w-full sm:w-72">
-            <label htmlFor="busca-clientes" className="sr-only">Buscar por nome, empresa ou e-mail</label>
-            <input id="busca-clientes" type="search" placeholder="Buscar por nome, empresa ou e-mail"
-                   value={busca} onChange={(e) => setBusca(e.target.value)} className={classeEntrada} />
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <div className="w-full sm:w-72">
+              <label htmlFor="busca-clientes" className="sr-only">Buscar por nome, empresa ou e-mail</label>
+              <input id="busca-clientes" type="search" placeholder="Buscar por nome, empresa ou e-mail"
+                     value={busca} onChange={(e) => setBusca(e.target.value)} className={classeEntrada} />
+            </div>
+            {ehGestor && (
+              <Botao variante="contorno" onClick={() => setImportando(true)} className="w-full shrink-0 sm:w-auto">
+                <span aria-hidden="true">⇅</span> Importar / Exportar
+              </Botao>
+            )}
           </div>
         </div>
 
@@ -183,6 +192,16 @@ export default function Clientes({ usuario, versao }) {
 
         <Paginacao pagina={pagina} totalPaginas={totalPaginas} totalItens={filtrados.length} onMudar={setPagina} />
       </Card>
+
+      {importando && (
+        <ImportarClientesModal
+          onFechar={() => setImportando(false)}
+          onImportado={(r) => {
+            setAviso(r.mensagem);
+            carregar();
+          }}
+        />
+      )}
 
       {excluindo && (
         <Modal

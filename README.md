@@ -433,6 +433,9 @@ Siga na ordem: cada etapa usa algo produzido na anterior.
 - [ ] Settings > Environments > New environment: producao
 - [ ] Secrets do environment: DB_HOST, DB_PORT=5432, DB_NAME,
       DB_USER=sandro_worker.<ref-do-projeto>, DB_PASSWORD (a do papel)
+- [ ] Rode de novo database/papel_worker.sql no SQL Editor depois da migração
+      de recorrências: o mesmo workflow também roda o worker de recorrências
+      (ver docs/IMPORTACAO_RECORRENCIAS.md).
 - [ ] Faça o merge de feature/deploy-producao na main SÓ depois dos secrets
       (sem eles o workflow falha a cada hora e o GitHub envia e-mail).
 - [ ] Actions > "Worker de reciclagem" > Run workflow com simulação ligada:

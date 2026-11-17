@@ -1,8 +1,10 @@
 import re
 
 from flask import Blueprint, g, jsonify, request
+from psycopg2 import errors
 
 from database.conexao import conectar_banco, get_db_connection
+from documento import normalizar_documento
 from iam import normalizar_email, validar_email
 from seguranca import perfil_requerido, token_obrigatorio
 
@@ -14,7 +16,7 @@ _TELEFONE = re.compile(r"^[0-9()+\-.\s]{8,30}$")
 
 SELECT_CLIENTES = """
     SELECT c.id, c.empresa_id, c.nome, c.email, c.telefone, c.status,
-           c.atualizado_em, u.nome
+           c.atualizado_em, u.nome, c.documento
     FROM clientes c
     LEFT JOIN usuarios u ON u.id = c.atualizado_por
 """
@@ -30,7 +32,11 @@ def montar_cliente(c):
         "status": c[5],
         "atualizado_em": c[6].isoformat() if c[6] else None,
         "atualizado_por_nome": c[7],
+        "documento": c[8],
     }
+
+
+DOCUMENTO_DUPLICADO = ({"erro": "Já existe um cliente com este CPF/CNPJ."}, 409)
 
 
 def _vazio_para_none(valor):
@@ -79,6 +85,14 @@ def validar_campos(dados, parcial):
             return None, "telefone inválido. Use de 8 a 30 dígitos, com ( ) - + . ou espaços."
         campos["telefone"] = telefone
 
+    if "documento" in dados:
+        if dados["documento"] is not None and not isinstance(dados["documento"], str):
+            return None, "documento inválido."
+        documento, problema = normalizar_documento(dados["documento"])
+        if problema:
+            return None, problema
+        campos["documento"] = documento
+
     if "status" in dados or not parcial:
         status = dados.get("status", "Lead")
         if status not in STATUS_VALIDOS:
@@ -104,15 +118,19 @@ def criar_cliente():
         return jsonify({"erro": erro}), 400
 
     with get_db_connection() as conexao:
-        with conexao.cursor() as cursor:
-            cursor.execute("""
-                INSERT INTO clientes (empresa_id, nome, email, telefone, status)
-                VALUES (%s, %s, %s, %s, %s)
-                RETURNING id;
-            """, (g.empresa_id, campos["nome"], campos.get("email"), campos.get("telefone"),
-                  campos["status"]))
-            cliente_id = cursor.fetchone()[0]
-        conexao.commit()
+        try:
+            with conexao.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO clientes (empresa_id, nome, email, telefone, status, documento)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    RETURNING id;
+                """, (g.empresa_id, campos["nome"], campos.get("email"), campos.get("telefone"),
+                      campos["status"], campos.get("documento")))
+                cliente_id = cursor.fetchone()[0]
+            conexao.commit()
+        except errors.UniqueViolation:
+            conexao.rollback()
+            return jsonify(DOCUMENTO_DUPLICADO[0]), DOCUMENTO_DUPLICADO[1]
 
     return jsonify({
         "mensagem": "Cliente cadastrado com sucesso!",
@@ -145,25 +163,29 @@ def editar_cliente(id):
     if erro:
         return jsonify({"erro": erro}), 400
     if not campos:
-        return jsonify({"erro": "Informe ao menos um campo: nome, email, telefone ou status."}), 400
+        return jsonify({"erro": "Informe ao menos um campo: nome, documento, email, telefone ou status."}), 400
 
     # Nomes de coluna vêm só da lista fixa de validar_campos (sem SQL dinâmico do usuário)
     atribuicoes = ", ".join(f"{coluna} = %({coluna})s" for coluna in campos)
 
     with get_db_connection() as conexao:
-        with conexao.cursor() as cursor:
-            cursor.execute(f"""
-                UPDATE clientes
-                SET {atribuicoes}, atualizado_em = NOW(), atualizado_por = %(usuario_id)s
-                WHERE id = %(id)s AND empresa_id = %(empresa_id)s;
-            """, {**campos, "usuario_id": g.usuario_id, "id": id, "empresa_id": g.empresa_id})
+        try:
+            with conexao.cursor() as cursor:
+                cursor.execute(f"""
+                    UPDATE clientes
+                    SET {atribuicoes}, atualizado_em = NOW(), atualizado_por = %(usuario_id)s
+                    WHERE id = %(id)s AND empresa_id = %(empresa_id)s;
+                """, {**campos, "usuario_id": g.usuario_id, "id": id, "empresa_id": g.empresa_id})
 
-            if cursor.rowcount == 0:
-                return jsonify({"erro": "Cliente não encontrado."}), 404
+                if cursor.rowcount == 0:
+                    return jsonify({"erro": "Cliente não encontrado."}), 404
 
-            cursor.execute(f"{SELECT_CLIENTES} WHERE c.id = %s;", (id,))
-            cliente = cursor.fetchone()
-        conexao.commit()
+                cursor.execute(f"{SELECT_CLIENTES} WHERE c.id = %s;", (id,))
+                cliente = cursor.fetchone()
+            conexao.commit()
+        except errors.UniqueViolation:
+            conexao.rollback()
+            return jsonify(DOCUMENTO_DUPLICADO[0]), DOCUMENTO_DUPLICADO[1]
 
     return jsonify({
         "mensagem": "Cliente atualizado com sucesso!",

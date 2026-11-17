@@ -89,3 +89,47 @@ export function descreverJanela(usuario) {
   if (!usuario.hora_inicio_acesso || !usuario.hora_fim_acesso) return "Acesso sem restrição de horário";
   return `Acesso das ${usuario.hora_inicio_acesso} às ${usuario.hora_fim_acesso} (${rotuloFuso(usuario.fuso_horario)})`;
 }
+
+// ---- Recorrências -----------------------------------------------------------
+// ISO 8601, igual ao servidor: 1 = segunda ... 7 = domingo
+export const DIAS_SEMANA = [
+  { valor: 1, rotulo: "Segunda-feira" },
+  { valor: 2, rotulo: "Terça-feira" },
+  { valor: 3, rotulo: "Quarta-feira" },
+  { valor: 4, rotulo: "Quinta-feira" },
+  { valor: 5, rotulo: "Sexta-feira" },
+  { valor: 6, rotulo: "Sábado" },
+  { valor: 7, rotulo: "Domingo" },
+];
+
+export function descreverRecorrencia({ frequencia, dia_semana: diaSemana, dia_mes: diaMes }) {
+  if (frequencia === "semanal") {
+    const dia = DIAS_SEMANA.find((d) => d.valor === Number(diaSemana))?.rotulo.toLowerCase() ?? "?";
+    return Number(diaSemana) >= 6 ? `Todo ${dia}` : `Toda ${dia}`;
+  }
+  return `Todo dia ${diaMes}${Number(diaMes) > 28 ? " (ou o último dia do mês)" : ""}`;
+}
+
+/**
+ * Prévia da próxima data, com a mesma regra do servidor (recorrencia.py).
+ * O servidor recalcula no fuso da empresa: isto é só para a pessoa conferir.
+ */
+export function proximaOcorrenciaISO({ frequencia, dia_semana: diaSemana, dia_mes: diaMes }, aPartirDe = new Date()) {
+  const inicio = new Date(aPartirDe.getFullYear(), aPartirDe.getMonth(), aPartirDe.getDate());
+  if (frequencia === "semanal") {
+    const hoje = inicio.getDay() === 0 ? 7 : inicio.getDay();
+    inicio.setDate(inicio.getDate() + ((Number(diaSemana) - hoje + 7) % 7));
+    return isoLocal(inicio);
+  }
+  const noMes = (ano, mes) => new Date(ano, mes, Math.min(Number(diaMes), new Date(ano, mes + 1, 0).getDate()));
+  const candidata = noMes(inicio.getFullYear(), inicio.getMonth());
+  return isoLocal(candidata >= inicio ? candidata : noMes(inicio.getFullYear(), inicio.getMonth() + 1));
+}
+
+export function formatarDocumento(documento) {
+  if (!documento) return null;
+  if (documento.length === 11) {
+    return `${documento.slice(0, 3)}.${documento.slice(3, 6)}.${documento.slice(6, 9)}-${documento.slice(9)}`;
+  }
+  return `${documento.slice(0, 2)}.${documento.slice(2, 5)}.${documento.slice(5, 8)}/${documento.slice(8, 12)}-${documento.slice(12)}`;
+}

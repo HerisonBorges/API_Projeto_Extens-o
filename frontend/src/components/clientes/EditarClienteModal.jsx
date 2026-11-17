@@ -13,12 +13,13 @@ export const STATUS_CLIENTE = [
 
 const normalizar = (v) => (v ?? "").trim();
 
-/** Edita nome, e-mail, telefone e status. Envia só o que mudou. */
+/** Edita nome, e-mail, telefone, CPF/CNPJ e status. Envia só o que mudou. */
 export default function EditarClienteModal({ cliente, onFechar, onSalvo }) {
   const [form, setForm] = useState({
     nome: cliente.nome ?? "",
     email: cliente.email ?? "",
     telefone: cliente.telefone ?? "",
+    documento: cliente.documento ?? "",
     status: cliente.status ?? "Lead",
   });
   const [enviando, setEnviando] = useState(false);
@@ -57,6 +58,13 @@ export default function EditarClienteModal({ cliente, onFechar, onSalvo }) {
         </Campo>
         <Campo rotulo="Telefone" ajuda="Ex.: (11) 90000-0000">
           {(p) => <input {...p} type="tel" maxLength={30} value={form.telefone} onChange={alterar("telefone")} className={classeEntrada} />}
+        </Campo>
+        <Campo rotulo="CPF/CNPJ" className="sm:col-span-2"
+               ajuda="Com ou sem pontuação. Aceita o CNPJ com letras. Deixe em branco para remover.">
+          {(p) => (
+            <input {...p} maxLength={18} autoComplete="off" autoCapitalize="characters" value={form.documento}
+                   onChange={alterar("documento")} className={classeEntrada} />
+          )}
         </Campo>
 
         <fieldset className="sm:col-span-2">
