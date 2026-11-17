@@ -2,7 +2,8 @@ import { useState } from "react";
 
 import Campo, { classeEntrada } from "./Campo.jsx";
 
-export const DICA_SENHA = "Mínimo de 10 caracteres. Evite senhas comuns e não use o seu e-mail.";
+export const DICA_SENHA =
+  "Mínimo de 14 caracteres. Uma frase fácil de lembrar funciona bem. Evite senhas comuns e não use o seu e-mail.";
 
 /** Campo de senha com botão Mostrar/Ocultar acessível. */
 export default function CampoSenha({ rotulo, valor, onChange, autoComplete = "new-password", ajuda, erro }) {

@@ -16,7 +16,11 @@ e como cada mudança fica registrada.
 
 ## Senhas
 
-- Mínimo de **10 caracteres**, máximo de **72 bytes** (limite do bcrypt).
+- Mínimo de **14 caracteres** (CIS Controls v8, salvaguarda 5.2, para contas
+  sem MFA), máximo de **72 bytes** (limite do bcrypt). Sem regras de composição
+  (maiúscula, símbolo): elas levam a senhas previsíveis como "Senha@2026".
+- Vale para senhas novas. Senhas atuais mais curtas continuam entrando até a
+  próxima troca ou redefinição.
 - Recusadas: senhas comuns (lista em `iam.py`), com menos de 4 caracteres
   distintos, ou iguais ao e-mail / à parte antes do `@`.
 - Sem regras de composição obrigatória (maiúscula, símbolo...), seguindo o

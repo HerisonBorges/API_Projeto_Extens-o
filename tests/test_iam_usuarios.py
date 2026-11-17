@@ -126,8 +126,9 @@ class PoliticaDeSenha(unittest.TestCase):
 
     def test_01_senhas_fracas_sao_recusadas(self):
         email = email_unico("politica")
-        for senha, motivo in [("curta1", "10 caracteres"), ("1234567890", "comum"),
-                              ("senha12345", "comum"), ("aaaaaaaaaaaa", "comum"),
+        for senha, motivo in [("curta1", "14 caracteres"), ("Gestor#2026xy", "13 caracteres"),
+                              ("12345678901234", "comum"), ("senha123456789", "comum"),
+                              ("aaaaaaaaaaaaaaaa", "comum"),
                               (email, "e-mail"), (email.split("@")[0], "e-mail"),
                               ("ç" * 37, "72 bytes"), (None, "obrigatória")]:
             with self.subTest(motivo=motivo):

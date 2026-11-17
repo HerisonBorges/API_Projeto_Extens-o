@@ -17,7 +17,7 @@ export default function FormularioNovaSenha({ rotuloAtual = "Senha atual", texto
   async function salvar(e) {
     e.preventDefault();
     setErro(null);
-    if (nova.length < 10) return setErro("A nova senha precisa de pelo menos 10 caracteres.");
+    if (nova.length < 14) return setErro("A nova senha precisa de pelo menos 14 caracteres.");
     if (nova !== confirmacao) return setErro("A confirmação não confere com a nova senha.");
 
     setEnviando(true);

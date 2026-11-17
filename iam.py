@@ -2,7 +2,8 @@
 
 Política de senha (alinhada ao NIST SP 800-63B: comprimento e lista de
 bloqueio, em vez de regras de composição que levam a senhas previsíveis):
-  - mínimo de 10 caracteres
+  - mínimo de 14 caracteres (CIS Controls v8, salvaguarda 5.2: 14 para
+    contas sem MFA, que é o caso do SANDRO hoje)
   - máximo de 72 bytes (limite do bcrypt; acima disso ele rejeita)
   - fora da lista de senhas comuns
   - diferente do e-mail e da parte antes do @
@@ -17,7 +18,7 @@ import secrets
 import bcrypt
 from flask import request
 
-SENHA_MINIMO = 10
+SENHA_MINIMO = 14
 SENHA_MAXIMO_BYTES = 72
 SENHA_TEMPORARIA_HORAS = 72
 
@@ -34,6 +35,14 @@ SENHAS_COMUNS = {
     "iloveyou12", "brasil1234", "brasil12345", "gestor1234", "gestor12345",
     "sandro1234", "sandrocrm1", "sandrocrm123", "crm1234567", "teste12345",
     "teste123456", "123456789a", "a123456789", "qwerty1234", "q1w2e3r4t5",
+    # 14+ caracteres: com o mínimo de 14, são estas que ainda passariam no tamanho
+    "12345678901234", "123456789012345", "1234567890123456", "01234567890123",
+    "senha123456789", "senhasenhasenha", "senhasenhasenhasenha", "minhasenha1234",
+    "password123456", "passwordpassword", "qwertyuiopasdf", "qwertyuiopasdfg",
+    "abcdefghijklmn", "abcdefghijklmnop", "1q2w3e4r5t6y7u", "q1w2e3r4t5y6u7",
+    "administrador1", "administrador123", "brasil12345678", "mudar123456789",
+    "trocar12345678", "teste123456789", "sandrocrm12345", "sandrocrm123456",
+    "gestor12345678", "iloveyou123456", "aaaaaaaaaaaaaa",
 }
 
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
