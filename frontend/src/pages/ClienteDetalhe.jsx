@@ -33,7 +33,8 @@ function Dado({ rotulo, children }) {
   return (
     <div>
       <dt className="text-xs text-sandro-label">{rotulo}</dt>
-      <dd className="mt-0.5 text-sm text-white">{children || "—"}</dd>
+      {/* break-words: e-mail longo quebra dentro da própria coluna em vez de invadir a vizinha */}
+      <dd className="mt-0.5 break-words text-sm text-white">{children || "—"}</dd>
     </div>
   );
 }
